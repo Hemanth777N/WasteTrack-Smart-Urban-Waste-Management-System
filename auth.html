@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign In / Sign Up - WasteTrack</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" id="auth-container">
+        <h2 id="form-title">Sign In</h2>
+        <form id="sign-in-form">
+            <div class="form-group">
+                <label for="signin-email">Email</label>
+                <input type="email" id="signin-email" required>
+            </div>
+            <div class="form-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" required>
+            </div>
+            <button type="submit" class="auth-btn">Sign In</button>
+            <span class="switch-link" onclick="showSignUp()">Don't have an account? Sign Up</span>
+        </form>
+        <form id="sign-up-form" style="display:none;">
+            <div class="form-group">
+                <label for="signup-name">Name</label>
+                <input type="text" id="signup-name" required>
+            </div>
+            <div class="form-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" required>
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" required>
+            </div>
+            <button type="submit" class="auth-btn">Sign Up</button>
+            <span class="switch-link" onclick="showSignIn()">Already have an account? Sign In</span>
+        </form>
+    </div>
+    <script>
+        function showSignUp() {
+            document.getElementById('sign-in-form').style.display = 'none';
+            document.getElementById('sign-up-form').style.display = 'block';
+            document.getElementById('form-title').textContent = 'Sign Up';
+        }
+        function showSignIn() {
+            document.getElementById('sign-up-form').style.display = 'none';
+            document.getElementById('sign-in-form').style.display = 'block';
+            document.getElementById('form-title').textContent = 'Sign In';
+        }
+    </script>
+</body>
+</html>
