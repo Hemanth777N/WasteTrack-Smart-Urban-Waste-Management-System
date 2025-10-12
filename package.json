@@ -1,0 +1,25 @@
+{
+  "name": "waste-track",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dedlinux777/waste-track.git"
+  },
+  "keywords": [],
+  "author": "Harshavardhan N, Muaz Ahmed Khan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dedlinux777/waste-track/issues"
+  },
+  "homepage": "https://github.com/dedlinux777/waste-track#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "mysql2": "^3.15.2"
+  }
+}

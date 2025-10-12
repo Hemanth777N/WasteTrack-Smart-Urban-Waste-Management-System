@@ -140,4 +140,146 @@ INSERT INTO Serves (vehicle_id, route_id) VALUES
 (305, 405);
 
 
+
+-- New Queries:
+
+-- 1) Department (create without manager FK to avoid circular dependency)
+CREATE TABLE Department (
+    dept_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    manager_name VARCHAR(100),
+    manager_id INT,                -- will add FK later
+    email VARCHAR(100) UNIQUE,
+    location VARCHAR(150)
+);
+
+-- 2) Employee
+CREATE TABLE Employee (
+    emp_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    DOB DATE,
+    gender VARCHAR(10),
+    salary DECIMAL(10,2),
+    job_title VARCHAR(50),
+    contact VARCHAR(15),
+    address VARCHAR(255),
+    dept_id INT,                   -- FK -> Department
+    status VARCHAR(20),
+    CONSTRAINT fk_employee_dept FOREIGN KEY (dept_id)
+        REFERENCES Department(dept_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+-- 3) Vehicle
+CREATE TABLE Vehicle (
+    vehicle_id INT AUTO_INCREMENT PRIMARY KEY,
+    vehicle_no VARCHAR(20) UNIQUE,
+    dept_id INT,                   -- FK -> Department
+    vehicle_type VARCHAR(50),
+    capacity INT,
+    serving_from DATE,
+    status ENUM('Available','In Use','In Maintenance') DEFAULT 'Available',
+    CONSTRAINT fk_vehicle_dept FOREIGN KEY (dept_id)
+        REFERENCES Department(dept_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+-- 4) Route
+CREATE TABLE Route (
+    route_id INT AUTO_INCREMENT PRIMARY KEY,
+    route_name VARCHAR(120),
+    from_loc VARCHAR(100),
+    to_loc VARCHAR(100),
+    location VARCHAR(150),         -- optional single-location field if needed
+    distance DECIMAL(6,2),
+    estimated_dur TIME,
+    fare DECIMAL(8,2)
+);
+
+-- 5) Assigned_To (relationship with attributes)
+CREATE TABLE Assigned_To (
+    assign_id INT AUTO_INCREMENT PRIMARY KEY,
+    emp_id INT NOT NULL,
+    vehicle_id INT NOT NULL,
+    route_id INT,                  -- optional link to route for this assignment
+    departure_from VARCHAR(100),
+    assign_date DATE DEFAULT (CURRENT_DATE),
+    CONSTRAINT fk_assigned_emp FOREIGN KEY (emp_id)
+        REFERENCES Employee(emp_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_assigned_vehicle FOREIGN KEY (vehicle_id)
+        REFERENCES Vehicle(vehicle_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_assigned_route FOREIGN KEY (route_id)
+        REFERENCES Route(route_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+-- 6) Serves (Vehicle <-> Route) M:N bridge table
+CREATE TABLE Serves (
+    vehicle_id INT NOT NULL,
+    route_id INT NOT NULL,
+    PRIMARY KEY (vehicle_id, route_id),
+    CONSTRAINT fk_serves_vehicle FOREIGN KEY (vehicle_id)
+        REFERENCES Vehicle(vehicle_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_serves_route FOREIGN KEY (route_id)
+        REFERENCES Route(route_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+-- 7) Waste_Record (waste collected per route / run)
+CREATE TABLE Waste_Record (
+    record_id INT AUTO_INCREMENT PRIMARY KEY,
+    route_id INT NOT NULL,
+    waste_type VARCHAR(50),
+    weight_kg DECIMAL(8,2),
+    collection_date DATE DEFAULT (CURRENT_DATE),
+    processed_status ENUM('Pending','In Transit','Processed') DEFAULT 'Pending',
+    CONSTRAINT fk_waste_route FOREIGN KEY (route_id)
+        REFERENCES Route(route_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+
+-- 8) Complaints
+CREATE TABLE Complaints (
+    complaint_id INT AUTO_INCREMENT PRIMARY KEY,
+    citizen_name VARCHAR(100) NOT NULL,
+    contact_no VARCHAR(15),
+    location VARCHAR(150),
+    description TEXT,
+    route_id INT,                  -- optional link to Route
+    assigned_emp INT,              -- optional link to the Employee handling it
+    status ENUM('Open','In Progress','Resolved') DEFAULT 'Open',
+    complaint_date DATE DEFAULT (CURRENT_DATE),
+    CONSTRAINT fk_complaint_route FOREIGN KEY (route_id)
+        REFERENCES Route(route_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+    CONSTRAINT fk_complaint_emp FOREIGN KEY (assigned_emp)
+        REFERENCES Employee(emp_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+-- 9) Now add the manager_id FK in Department (Employee exists now)
+ALTER TABLE Department
+ADD CONSTRAINT uq_department_manager UNIQUE (manager_id);
+
+ALTER TABLE Department
+ADD CONSTRAINT fk_department_manager
+FOREIGN KEY (manager_id) REFERENCES Employee(emp_id)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL;
+
+
+
 ```
