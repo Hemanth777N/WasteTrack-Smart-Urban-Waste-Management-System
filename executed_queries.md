@@ -141,7 +141,7 @@ INSERT INTO Serves (vehicle_id, route_id) VALUES
 
 
 
--- New Queries:
+-- New Queries
 
 -- 1) Department (create without manager FK to avoid circular dependency)
 CREATE TABLE Department (
