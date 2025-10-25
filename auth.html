@@ -2,12 +2,247 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In / Sign Up - WasteTrack</title>
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- Added Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <style>
+        /* --- Import Google Font (Same as welcome page) --- */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        /* --- CSS Variables (Consistent Theme) --- */
+        :root {
+            --primary-green: #2ecc71;
+            --primary-green-dark: #27ae60;
+            --text-dark: #333333;
+            --text-light: #666666;
+            --bg-light: #ffffff;
+            --bg-gradient-start: #e0f7fa;
+            --bg-gradient-end: #f8f9fa;
+            --border-light: #dddddd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            /* --- New Icon Button Colors --- */
+            --admin-blue: #3498db;
+            --admin-blue-dark: #2980b9;
+            --employee-orange: #e67e22;
+            --employee-orange-dark: #d35400;
+        }
+
+        /* --- Global Reset & Body Styling --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem 0; 
+        }
+
+        /* --- The Auth Form Card --- */
+        #auth-container {
+            background: var(--bg-light);
+            padding: 2.5rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            animation: fadeInSlideUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        /* --- Form Title --- */
+        #form-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-green);
+            margin-bottom: 2rem;
+        }
+
+        /* --- Form Elements --- */
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-dark);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+        }
+
+        /* --- Auth Button (Consistent with Welcome Page) --- */
+        .auth-btn {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            width: 100%;
+            background-color: var(--primary-green);
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 2.5rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .auth-btn:hover,
+        .auth-btn:focus {
+            background-color: var(--primary-green-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+            outline: none;
+        }
+
+        .auth-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+        }
+
+        /* --- Link to switch between Sign In / Sign Up --- */
+        .switch-link {
+            display: block;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .switch-link:hover {
+            color: var(--primary-green);
+            text-decoration: underline;
+        }
+
+        /* --- NEW STYLES FOR ADMIN/EMPLOYEE ICONS --- 
+        */
+
+        /* --- Divider "Or sign in as" --- */
+        .alternative-login-divider {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 1.5rem 0 1rem;
+            position: relative;
+            /* Creates the horizontal lines */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alternative-login-divider::before,
+        .alternative-login-divider::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background-color: var(--border-light);
+            margin: 0 0.5rem;
+        }
+
+        /* --- Container for the two icon buttons --- */
+        .alternative-login-options {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem; /* Adds space between buttons */
+            width: 100%;
+        }
+
+        /* --- Base style for both icon buttons --- */
+        .alt-login-btn {
+            flex-grow: 1; /* Each button takes up half the space */
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            
+            /* Align icon and text */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alt-login-btn i {
+            margin-right: 8px; /* Space between icon and text */
+            font-size: 1.1em; /* Make icon slightly larger than text */
+        }
+
+        /* --- Admin Button Specific Style --- */
+        .admin-btn {
+            background-color: var(--admin-blue);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+        }
+        .admin-btn:hover {
+            background-color: var(--admin-blue-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+
+        /* --- Employee Button Specific Style --- */
+        .employee-btn {
+            background-color: var(--employee-orange);
+            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2);
+        }
+        .employee-btn:hover {
+            background-color: var(--employee-orange-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(230, 126, 34, 0.3);
+        }
+        /* --- Animation Keyframes (Same as welcome page) --- */
+        @keyframes fadeInSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container" id="auth-container">
         <h2 id="form-title">Sign In</h2>
+        
+        <!-- Sign In Form -->
         <form id="sign-in-form">
             <div class="form-group">
                 <label for="signin-email">Email</label>
@@ -18,8 +253,31 @@
                 <input type="password" id="signin-password" required>
             </div>
             <button type="submit" class="auth-btn">Sign In</button>
+
+            <!-- 
+            --- NEW HTML FOR ADMIN/EMPLOYEE ICONS --- 
+            -->
+            <div class="alternative-login-divider">
+                <span>Or sign in as</span>
+            </div>
+            <div class="alternative-login-options">
+                <!-- Admin Button -->
+                <button type="button" class="alt-login-btn admin-btn">
+                    <i class="fas fa-user-shield"></i> Admin
+                </button>
+                <!-- Employee Button -->
+                <button type="button" class="alt-login-btn employee-btn">
+                    <i class="fas fa-user-briefcase"></i> Employee
+                </button>
+            </div>
+            <!-- 
+            --- END OF NEW HTML --- 
+            -->
+
             <span class="switch-link" onclick="showSignUp()">Don't have an account? Sign Up</span>
         </form>
+
+        <!-- Sign Up Form (unchanged) -->
         <form id="sign-up-form" style="display:none;">
             <div class="form-group">
                 <label for="signup-name">Name</label>
@@ -37,12 +295,15 @@
             <span class="switch-link" onclick="showSignIn()">Already have an account? Sign In</span>
         </form>
     </div>
+
+    <!-- JavaScript (unchanged) -->
     <script>
         function showSignUp() {
             document.getElementById('sign-in-form').style.display = 'none';
             document.getElementById('sign-up-form').style.display = 'block';
             document.getElementById('form-title').textContent = 'Sign Up';
         }
+
         function showSignIn() {
             document.getElementById('sign-up-form').style.display = 'none';
             document.getElementById('sign-in-form').style.display = 'block';

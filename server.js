@@ -8,8 +8,9 @@ const PORT = 3000;
 const pool = mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "Dedlinux@14052005", // <-- MySQL root password
+  password: "", // <-- MySQL root password
   database: "waste_track",
+  port:3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

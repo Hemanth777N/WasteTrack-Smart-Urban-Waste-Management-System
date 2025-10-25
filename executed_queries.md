@@ -280,6 +280,7 @@ FOREIGN KEY (manager_id) REFERENCES Employee(emp_id)
     ON UPDATE CASCADE
     ON DELETE SET NULL;
 
+show tables;
 
 
 ```

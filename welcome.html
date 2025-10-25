@@ -4,10 +4,248 @@
     <meta charset="UTF-8">
     <title>Welcome - WasteTrack</title>
     <link rel="stylesheet" href="style.css">
-</head>
+    <style>
+        /* Welcome Css start */
+
+/* --- Import Google Font --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+/* --- CSS Variables (Your App's Theme) --- */
+:root {
+    --primary-green: #2ecc71;
+    --primary-green-dark: #27ae60;
+    --text-dark: #333333;
+    --text-light: #666666;
+    --bg-light: #ffffff;
+    --bg-gradient-start: #e0f7fa;
+    --bg-gradient-end: #f8f9fa;
+    --border-light: #dddddd;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* --- Global Reset & Body Styling --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    /* Consistent gradient background */
+    background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+    color: var(--text-dark);
+    
+    /* Center all content */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* --- Main Card Styling (for .container) --- */
+/* This will style your welcome card AND the auth form card */
+.container,
+#auth-container {
+    background: var(--bg-light);
+    padding: 2.5rem 3rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px var(--shadow-color);
+    text-align: center;
+    width: 90%;
+    
+    /* Animation for a smooth entrance */
+    animation: fadeInSlideUp 0.8s ease-out forwards;
+    opacity: 0;
+}
+
+/* Specific widths for different cards */
+.container { /* Welcome card */
+    max-width: 450px;
+}
+
+#auth-container { /* Auth card */
+    max-width: 400px;
+    text-align: left; /* Auth forms look better left-aligned */
+}
+#auth-container h2 { /* Center the title on auth page */
+    text-align: center;
+}
+
+
+/* --- Typography --- */
+h1, h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-green);
+    margin-bottom: 0.75rem;
+}
+
+/* Auth page title gets a bit more space */
+#form-title {
+    margin-bottom: 2rem;
+}
+
+p {
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-bottom: 2rem;
+}
+
+/* --- Button Styling (for .btn and .auth-btn) --- */
+.btn,
+.auth-btn {
+    /* Link-specific styles */
+    display: inline-block; /* Allows <a> tag to have padding */
+    text-decoration: none; /* Removes underline from <a> tag */
+
+    /* Font and Text */
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    
+    /* Box Model */
+    background-color: var(--primary-green);
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem 2.5rem;
+    cursor: pointer;
+    
+    /* Shadow and transition */
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+    transition: all 0.3s ease;
+}
+
+/* Full-width button for auth forms */
+.auth-btn {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+/* --- Button Interactions (UX Improvement) --- */
+.btn:hover,
+.auth-btn:hover,
+.btn:focus,
+.auth-btn:focus {
+    background-color: var(--primary-green-dark);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+    outline: none;
+    color: #ffffff; /* Ensure text stays white */
+}
+
+.btn:active,
+.auth-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
+}
+
+/* --- Login Type Icons --- */
+.login-type-container {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.login-type {
+    cursor: pointer;
+    padding: 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.login-type:hover {
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.login-type i {
+    font-size: 2rem;
+    color: var(--primary-green);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.login-type span {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.login-type.active {
+    background: rgba(46, 204, 113, 0.1);
+}
+
+/* --- Auth Form Specifics (from last time) --- */
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-dark);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+}
+
+.switch-link {
+    display: block;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    text-align: center;
+}
+
+.switch-link:hover {
+    color: var(--primary-green);
+    text-decoration: underline;
+}
+
+/* --- Animation Keyframes --- */
+@keyframes fadeInSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+
+    </style>
+    </head>
 <body>
     <div class="container">
-        <h1>Welcome to WasteTrack</h1>
+        <h1>Welcome</h1>
         <p>Waste Collection and Vehicle Management System</p>
         <a href="auth.html" class="btn">Proceed</a>
     </div>
