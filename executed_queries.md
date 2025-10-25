@@ -1,146 +1,4 @@
 ```sql
-
--- 1. Employee Table
-CREATE TABLE Employee (
-    emp_id INT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    DOB DATE,
-    gender VARCHAR(10),
-    salary DECIMAL(10,2),
-    job_title VARCHAR(50),
-    contact VARCHAR(15),
-    address VARCHAR(255),
-    dept_id INT,    -- Employee belongs to a department
-    status VARCHAR(20),
-);
-
--- 2. Department Table
-CREATE TABLE Department (
-    dept_id INT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    manager_name VARCHAR(100),
-    manage_id INT UNIQUE,   -- One manager per department (1:1 mapping)
-    email VARCHAR(100) UNIQUE,
-    FOREIGN KEY (manage_id) REFERENCES Employee(emp_id)
-);
-
--- altering employee table to add foreign key
-
-ALTER TABLE Employee
-ADD CONSTRAINT fk_employee_department
-FOREIGN KEY (dept_id) REFERENCES Department(dept_id);
-
-
-
--- 3. Vehicle Table
-CREATE TABLE Vehicle (
-    vehicle_id INT PRIMARY KEY,
-    dept_id INT,   -- Vehicle belongs to a department
-    capacity INT,
-    serving_from DATE,
-    FOREIGN KEY (dept_id) REFERENCES Department(dept_id)
-);
-
--- 4. Route Table
-CREATE TABLE Route (
-    route_id INT PRIMARY KEY,
-    from_loc VARCHAR(100),
-    to_loc VARCHAR(100),
-    distance DECIMAL(6,2),
-    estimated_dur TIME,
-    fare DECIMAL(8,2)
-);
-
--- 5. Assigned_to Relationship Table (Employee <-> Vehicle)
-CREATE TABLE Assigned_to (
-    assign_id INT PRIMARY KEY, -- Unique identifier for assignment
-    emp_id INT,
-    vehicle_id INT,
-    departure_from VARCHAR(100),
-    FOREIGN KEY (emp_id) REFERENCES Employee(emp_id),
-    FOREIGN KEY (vehicle_id) REFERENCES Vehicle(vehicle_id)
-);
-
--- 6. Serves Relationship Table (Vehicle <-> Route)
-CREATE TABLE Serves (
-    vehicle_id INT,
-    route_id INT,
-    PRIMARY KEY (vehicle_id, route_id),
-    FOREIGN KEY (vehicle_id) REFERENCES Vehicle(vehicle_id),
-    FOREIGN KEY (route_id) REFERENCES Route(route_id)
-);
-
--- Department has manage_id → FK referencing Employee(emp_id).
--- Employee has dept_id → FK referencing Department(dept_id).
--- Insert Employees without dept_id
-INSERT INTO Employee (emp_id, name, DOB, gender, salary, job_title, contact, address, dept_id, status) VALUES
-(101, 'Ravi Kumar', '1980-03-15', 'Male', 65000, 'Manager', '9876543210', 'BTM Layout, Bangalore', NULL, 'Active'),
-(102, 'Priya Sharma', '1985-07-22', 'Female', 70000, 'Manager', '9812345678', 'Indiranagar, Bangalore', NULL, 'Active'),
-(103, 'Sandeep Reddy', '1979-11-10', 'Male', 68000, 'Manager', '9123456789', 'Jayanagar, Bangalore', NULL, 'Active'),
-(104, 'Anita Rao', '1988-05-18', 'Female', 64000, 'Manager', '9001234567', 'Whitefield, Bangalore', NULL, 'Active'),
-(105, 'Manoj Singh', '1983-01-30', 'Male', 72000, 'Manager', '9098765432', 'Koramangala, Bangalore', NULL, 'Active');
-
--- Insert Departments (linking managers)
-INSERT INTO Department (dept_id, name, manager_name, manage_id, email) VALUES
-(1, 'Waste Collection', 'Ravi Kumar', 101, 'ravi.k@wastetrack.com'),
-(2, 'Recycling Unit', 'Priya Sharma', 102, 'priya.s@wastetrack.com'),
-(3, 'Logistics', 'Sandeep Reddy', 103, 'sandeep.r@wastetrack.com'),
-(4, 'Maintenance', 'Anita Rao', 104, 'anita.r@wastetrack.com'),
-(5, 'Operations', 'Manoj Singh', 105, 'manoj.s@wastetrack.com');
-
-
--- Update Employees with dept_id
-UPDATE Employee SET dept_id = 1 WHERE emp_id = 101;
-UPDATE Employee SET dept_id = 2 WHERE emp_id = 102;
-UPDATE Employee SET dept_id = 3 WHERE emp_id = 103;
-UPDATE Employee SET dept_id = 4 WHERE emp_id = 104;
-UPDATE Employee SET dept_id = 5 WHERE emp_id = 105;
-
--- Insert other Employees (non-managers)
-INSERT INTO Employee (emp_id, name, DOB, gender, salary, job_title, contact, address, dept_id, status) VALUES
-(201, 'Kiran Kumar', '1992-02-20', 'Male', 35000, 'Driver', '9911223344', 'HSR Layout, Bangalore', 1, 'Active'),
-(202, 'Divya Shetty', '1995-09-12', 'Female', 30000, 'Cleaner', '9988776655', 'Marathahalli, Bangalore', 1, 'Active'),
-(203, 'Arjun Gowda', '1990-12-05', 'Male', 36000, 'Driver', '8877665544', 'Hebbal, Bangalore', 3, 'Active'),
-(204, 'Meena R', '1996-04-25', 'Female', 28000, 'Technician', '7766554433', 'Malleswaram, Bangalore', 4, 'Active'),
-(205, 'Rahul Verma', '1991-06-14', 'Male', 32000, 'Supervisor', '6655443322', 'Rajajinagar, Bangalore', 5, 'Active');
-
--- vehicle
-INSERT INTO Vehicle (vehicle_id, dept_id, capacity, serving_from) VALUES
-(301, 1, 2000, '2020-01-10'),
-(302, 1, 1500, '2021-03-15'),
-(303, 3, 2500, '2019-08-20'),
-(304, 4, 1000, '2022-02-12'),
-(305, 5, 1800, '2021-06-05');
-
-
--- route
-INSERT INTO Route (route_id, from_loc, to_loc, distance, estimated_dur, fare) VALUES
-(401, 'Majestic', 'Indiranagar', 12.5, '00:30:00', 50),
-(402, 'Koramangala', 'Whitefield', 18.0, '00:45:00', 70),
-(403, 'Jayanagar', 'Electronic City', 22.3, '01:00:00', 90),
-(404, 'Hebbal', 'MG Road', 10.2, '00:25:00', 40),
-(405, 'Malleswaram', 'Yeshwanthpur', 8.5, '00:20:00', 30);
-
-
--- assigned_to
-INSERT INTO Assigned_to (assign_id, emp_id, vehicle_id, departure_from) VALUES
-(501, 201, 301, 'Majestic'),
-(502, 202, 302, 'BTM Layout'),
-(503, 203, 303, 'Jayanagar'),
-(504, 204, 304, 'Whitefield'),
-(505, 205, 305, 'Rajajinagar');
-
-
--- serves
-INSERT INTO Serves (vehicle_id, route_id) VALUES
-(301, 401),
-(302, 402),
-(303, 403),
-(304, 404),
-(305, 405);
-
-
-
 -- New Queries
 
 -- 1) Department (create without manager FK to avoid circular dependency)
@@ -283,4 +141,97 @@ FOREIGN KEY (manager_id) REFERENCES Employee(emp_id)
 show tables;
 
 
+ MySQL  localhost:3306 ssl  waste_track  SQL > ALTER TABLE Employee
+                                            -> ADD COLUMN email VARCHAR(100) UNIQUE,
+                                            -> ADD COLUMN password VARCHAR(255),
+                                            -> ADD COLUMN role ENUM('Manager', 'Employee') DEFAULT 'Employee';
+Query OK, 0 rows affected (0.5966 sec)
+
+Records: 0  Duplicates: 0  Warnings: 0
+ MySQL  localhost:3306 ssl  waste_track  SQL > ALTER TABLE Complaints
+                                            -> ADD COLUMN dept_id INT,
+                                            -> ADD CONSTRAINT fk_complaint_dept
+                                            ->   FOREIGN KEY (dept_id)
+                                            ->   REFERENCES Department(dept_id)
+                                            ->   ON UPDATE CASCADE
+                                            ->   ON DELETE SET NULL;
+Query OK, 1 row affected (0.1512 sec)
+
+Records: 1  Duplicates: 0  Warnings: 0
+
+ MySQL  localhost:3306 ssl  waste_track  SQL > UPDATE Employee
+                                            -> SET role = 'Manager'
+                                            -> WHERE email = 'manager@gmail.com';
+Query OK, 1 row affected (0.0880 sec)
+
+Rows matched: 1  Changed: 1  Warnings: 0
+ MySQL  localhost:3306 ssl  waste_track  SQL > -- 1. View for pending complaints (for stats page)
+Query OK, 0 rows affected (0.0385 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL > CREATE VIEW v_pending_complaints AS
+                                            -> SELECT
+                                            ->     c.complaint_id,
+                                            ->     c.citizen_name,
+                                            ->     c.location,
+                                            ->     c.description,
+                                            ->     c.status,
+                                            ->     e.name AS employee_name,
+                                            ->     r.route_name
+                                            -> FROM complaints c
+                                            -> LEFT JOIN employee e ON c.assigned_emp = e.emp_id
+                                            -> LEFT JOIN route r ON c.route_id = r.route_id
+                                            -> WHERE c.status IN ('Open', 'In Progress');
+Query OK, 0 rows affected (0.0590 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL >
+ MySQL  localhost:3306 ssl  waste_track  SQL > -- 2. View for vehicle usage (for stats page)
+Query OK, 0 rows affected (0.0007 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL > CREATE VIEW v_vehicle_usage AS
+                                            -> SELECT
+                                            ->     v.vehicle_no,
+                                            ->     v.vehicle_type,
+                                            ->     v.status,
+                                            ->     COUNT(a.assign_id) AS total_assignments
+                                            -> FROM vehicle v
+                                            -> LEFT JOIN assigned_to a ON v.vehicle_id = a.vehicle_id
+                                            -> GROUP BY v.vehicle_id, v.vehicle_no, v.vehicle_type, v.status;
+Query OK, 0 rows affected (0.0134 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL >
+ MySQL  localhost:3306 ssl  waste_track  SQL > -- 3. View for department summary (for manager & stats)
+Query OK, 0 rows affected (0.0007 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL > CREATE VIEW v_department_summary AS
+                                            -> SELECT
+                                            ->     d.dept_id,
+                                            ->     d.name AS department_name,
+                                            ->     COUNT(DISTINCT e.emp_id) AS total_employees,
+                                            ->     COUNT(DISTINCT v.vehicle_id) AS total_vehicles
+                                            -> FROM department d
+                                            -> LEFT JOIN employee e ON d.dept_id = e.dept_id
+                                            -> LEFT JOIN vehicle v ON d.dept_id = v.dept_id
+                                            -> GROUP BY d.dept_id, d.name;
+Query OK, 0 rows affected (0.0186 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL >
+ MySQL  localhost:3306 ssl  waste_track  SQL > -- 4. View for waste collection stats (for stats page)
+Query OK, 0 rows affected (0.0006 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL > CREATE VIEW v_waste_collection_stats AS
+                                            -> SELECT
+                                            ->     r.route_name,
+                                            ->     AVG(w.weight_kg) AS avg_collected_kg,
+                                            ->     SUM(w.weight_kg) AS total_collected_kg
+                                            -> FROM waste_record w
+                                            -> JOIN route r ON w.route_id = r.route_id
+                                            -> GROUP BY r.route_name;
+Query OK, 0 rows affected (0.0234 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL >
+ MySQL  localhost:3306 ssl  waste_track  SQL > -- 5. View for employee performance (for stats page)
+Query OK, 0 rows affected (0.0006 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL > CREATE VIEW v_employee_performance AS
+                                            -> SELECT
+                                            ->     e.name AS employee_name,
+                                            ->     e.job_title,
+                                            ->     COUNT(c.complaint_id) AS complaints_handled
+                                            -> FROM employee e
+                                            -> LEFT JOIN complaints c ON e.emp_id = c.assigned_emp
+                                            -> WHERE e.role = 'Employee'
+                                            -> GROUP BY e.emp_id, e.name, e.job_title;
+Query OK, 0 rows affected (0.0091 sec)
+ MySQL  localhost:3306 ssl  waste_track  SQL >
 ```

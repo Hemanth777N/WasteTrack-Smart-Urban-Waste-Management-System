@@ -41,17 +41,17 @@
             if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
         }
 
+        // --- Inside checkLogin() function in manager.html ---
         async function checkLogin() {
             try {
-                const res = await fetch('/api/me');
-                const body = await res.json();
-                if (!res.ok || body.role !== 'Manager') {
-                    window.location.href = '/auth.html';
-                }
+                // ... (auth logic) ...
                 document.getElementById('mgrName').textContent = `(${body.name})`;
-                // Once logged in, load all data
-                loadPendingComplaints(); // <-- UPDATED
-                loadDepartmentSummary(); // <-- NEW
+
+                // --- CHANGE THIS LINE ---
+                loadComplaints(); // <-- Change from loadPendingComplaints() back to this
+                // --- END CHANGE ---
+
+                loadDepartmentSummary(); // <-- This one is correct, leave it
                 loadDropdownData();
             } catch (e) {
                 window.location.href = '/auth.html';
@@ -75,19 +75,19 @@
         }
 
         // --- REVISED: Load from v_pending_complaints ---
-        async function loadPendingComplaints() {
+        // --- REVISED: Load from /api/complaints (NOT the view) ---
+        async function loadComplaints() {
             const tbody = document.querySelector('#mgrComplaintsTable tbody');
             tbody.innerHTML = '<tr><td colspan="7" class="loader-container"><span class="loader"></span></td></tr>';
             try {
-                // --- THIS IS THE CHANGE ---
-                // We fetch from the view. Note: This view may need to be filtered by dept_id in the backend
-                // For now, we fetch the whole view as per the plan.
-                const res = await fetch('/api/views/v_pending_complaints');
+                // --- THIS IS THE FIX ---
+                // Fetch from the main API route, which is filtered by the backend.
+                const res = await fetch('/api/complaints');
                 const data = await res.json();
                 tbody.innerHTML = '';
 
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7">No pending complaints found.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7">No complaints found for this department.</td></tr>';
                     return;
                 }
 
