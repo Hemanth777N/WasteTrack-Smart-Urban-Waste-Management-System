@@ -7,40 +7,88 @@
 </head>
 <body>
   <div class="page-container">
-    <h2>Statistics</h2>
+    <h2>Public Statistics</h2>
 
     <div class="card">
-      <h3>Pending Complaints View</h3>
+      <h3>Pending Complaints (v_pending_complaints)</h3>
       <div class="table-scroll-wrapper">
-        <table id="viewTable">
-          <thead><tr id="viewHead"></tr></thead>
-          <tbody id="viewBody"></tbody>
-        </table>
+        <table id="viewPendingTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Department Summary (v_department_summary)</h3>
+      <div class="table-scroll-wrapper">
+        <table id="viewDeptTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Employee Performance (v_employee_performance)</h3>
+      <div class="table-scroll-wrapper">
+        <table id="viewEmpPerfTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Vehicle Usage (v_vehicle_usage)</h3>
+      <div class="table-scroll-wrapper">
+        <table id="viewVehicleTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Waste Collection Stats (v_waste_collection_stats)</h3>
+      <div class="table-scroll-wrapper">
+        <table id="viewWasteStatsTable"><thead></thead><tbody></tbody></table>
       </div>
     </div>
   </div>
 
   <script>
-    async function loadView(view='v_pending_complaints') {
+    async function loadView(viewName, tableId) {
+      const table = document.getElementById(tableId);
+      const thead = table.querySelector('thead');
+      const tbody = table.querySelector('tbody');
+      tbody.innerHTML = '<tr><td colspan="99" class="loader-container"><span class="loader"></span></td></tr>';
       try {
-        const res = await fetch('/api/views/' + view);
+        const res = await fetch('/api/views/' + viewName);
         const data = await res.json();
-        const thead = document.getElementById('viewHead');
-        const tbody = document.getElementById('viewBody');
-        thead.innerHTML = ''; tbody.innerHTML = '';
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
         if (!Array.isArray(data) || !data.length) {
-          tbody.innerHTML = '<tr><td>No data</td></tr>'; return;
+          tbody.innerHTML = '<tr><td colspan="99">No data found for this view.</td></tr>';
+          return;
         }
-        Object.keys(data[0]).forEach(k => thead.innerHTML += `<th>${k}</th>`);
-        data.forEach(row => {
-          let r = '<tr>';
-          Object.values(row).forEach(v => r += `<td>${v}</td>`);
-          r += '</tr>';
-          tbody.innerHTML += r;
+        const headerRow = document.createElement('tr');
+        Object.keys(data[0]).forEach(key => {
+          const th = document.createElement('th');
+          th.textContent = key;
+          headerRow.appendChild(th);
         });
-      } catch(e) { console.error(e); }
+        thead.appendChild(headerRow);
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          Object.values(row).forEach(val => {
+            const td = document.createElement('td');
+            td.textContent = val;
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error(`Failed to load view ${viewName}:`, e);
+        tbody.innerHTML = `<tr><td colspan="99" style="color:red;">Error loading data.</td></tr>`;
+      }
     }
-    loadView();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadView('v_pending_complaints', 'viewPendingTable');
+      loadView('v_department_summary', 'viewDeptTable');
+      loadView('v_employee_performance', 'viewEmpPerfTable');
+      loadView('v_vehicle_usage', 'viewVehicleTable');
+      loadView('v_waste_collection_stats', 'viewWasteStatsTable');
+    });
   </script>
 </body>
 </html>
