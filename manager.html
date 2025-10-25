@@ -1,114 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8">
-  <title>WasteTrack - Manager</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+    <title>WasteTrack - Manager</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <div class="page-container">
-    <h2>Manager Dashboard <span id="mgrName"></span></h2>
-    <button id="logoutBtn" style="padding: 0.5rem 1rem; cursor: pointer; margin-bottom: 1rem;">Logout</button>
+    <div class="page-container">
+        <h2>Manager Dashboard <span id="mgrName"></span></h2>
+        <button id="logoutBtn" style="padding: 0.5rem 1rem; cursor: pointer; margin-bottom: 1rem;">Logout</button>
 
-    <div id="mgr-message" style="display:none;"></div>
+        <div id="mgr-message" style="display:none;"></div>
 
-    <div class="card">
-      <h3>Department Complaints</h3>
-      <div class="table-scroll-wrapper">
-        <table id="mgrComplaintsTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Route</th>
-              <th>Description</th>
-              <th>Status</th>
-              <th>Re-assign</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+        <div class="card">
+            <h3>Your Department Summary (v_department_summary)</h3>
+            <div class="table-scroll-wrapper">
+                <table id="deptSummaryTable">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Total Employees</th>
+                            <th>Total Vehicles</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
     </div>
-  </div>
+    <script>
+        const msgBox = document.getElementById('mgr-message');
 
-  <script>
-    const msgBox = document.getElementById('mgr-message');
-    
-    // --- NEW: Message function ---
-    function showMessage(text, type = 'success', timeout = 3000) {
-      msgBox.className = '';
-      msgBox.style.display = 'block';
-      msgBox.textContent = text;
-      msgBox.classList.add(type === 'error' ? 'message-error' : 'message-success');
-      if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
-    }
-
-    // --- NEW: Login Check ---
-    async function checkLogin() {
-      try {
-        const res = await fetch('/api/me');
-        const body = await res.json();
-        if (!res.ok || body.role !== 'Manager') {
-          window.location.href = '/auth.html';
-        }
-        document.getElementById('mgrName').textContent = `(${body.name})`;
-        // Once logged in, load complaints and dropdown data
-        loadComplaints();
-        loadDropdownData();
-      } catch (e) {
-        window.location.href = '/auth.html';
-      }
-    }
-
-    // --- Store dropdown data globally ---
-    let allEmployees = [];
-    let allVehicles = [];
-
-    async function loadDropdownData() {
-      try {
-        // Fetches employees/vehicles for the manager's department (backend handles filtering)
-        const [empRes, vehRes] = await Promise.all([
-          fetch('/api/employees?role=Employee'), 
-          fetch('/api/vehicles')
-        ]);
-        allEmployees = await empRes.json();
-        allVehicles = await vehRes.json();
-      } catch (e) {
-        console.error('Failed to load dropdown data', e);
-      }
-    }
-
-    // --- REVISED: Load Complaints ---
-    async function loadComplaints() {
-      const tbody = document.querySelector('#mgrComplaintsTable tbody');
-      tbody.innerHTML = '<tr><td colspan="7" class="loader-container"><span class="loader"></span></td></tr>';
-      try {
-        // Backend filters complaints by manager's dept_id
-        const res = await fetch('/api/complaints');
-        const data = await res.json();
-        tbody.innerHTML = '';
-        
-        if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7">No complaints found for this department.</td></tr>';
-          return;
+        function showMessage(text, type = 'success', timeout = 3000) {
+            msgBox.className = '';
+            msgBox.style.display = 'block';
+            msgBox.textContent = text;
+            msgBox.classList.add(type === 'error' ? 'message-error' : 'message-success');
+            if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
         }
 
-        data.forEach(c => {
-          const empOptions = allEmployees.map(e => `<option value="${e.emp_id}" ${e.emp_id === c.assigned_emp ? 'selected' : ''}>${e.name}</option>`).join('');
-          const vehOptions = allVehicles.map(v => `<option value="${v.vehicle_id}">${v.vehicle_no}</option>`).join('');
+        async function checkLogin() {
+            try {
+                const res = await fetch('/api/me');
+                const body = await res.json();
+                if (!res.ok || body.role !== 'Manager') {
+                    window.location.href = '/auth.html';
+                }
+                document.getElementById('mgrName').textContent = `(${body.name})`;
+                // Once logged in, load all data
+                loadPendingComplaints(); // <-- UPDATED
+                loadDepartmentSummary(); // <-- NEW
+                loadDropdownData();
+            } catch (e) {
+                window.location.href = '/auth.html';
+            }
+        }
 
-          const isResolved = c.status === 'Resolved';
-          const isClosed = c.status === 'Closed';
+        let allEmployees = [];
+        let allVehicles = [];
 
-          tbody.innerHTML += `
+        async function loadDropdownData() {
+            try {
+                const [empRes, vehRes] = await Promise.all([
+                    fetch('/api/employees?role=Employee'),
+                    fetch('/api/vehicles')
+                ]);
+                allEmployees = await empRes.json();
+                allVehicles = await vehRes.json();
+            } catch (e) {
+                console.error('Failed to load dropdown data', e);
+            }
+        }
+
+        // --- REVISED: Load from v_pending_complaints ---
+        async function loadPendingComplaints() {
+            const tbody = document.querySelector('#mgrComplaintsTable tbody');
+            tbody.innerHTML = '<tr><td colspan="7" class="loader-container"><span class="loader"></span></td></tr>';
+            try {
+                // --- THIS IS THE CHANGE ---
+                // We fetch from the view. Note: This view may need to be filtered by dept_id in the backend
+                // For now, we fetch the whole view as per the plan.
+                const res = await fetch('/api/views/v_pending_complaints');
+                const data = await res.json();
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7">No pending complaints found.</td></tr>';
+                    return;
+                }
+
+                data.forEach(c => {
+                    const empOptions = allEmployees.map(e => `<option value="${e.emp_id}" ${e.emp_id === c.assigned_emp ? 'selected' : ''}>${e.name}</option>`).join('');
+
+                    const isResolved = c.status === 'Resolved';
+                    const isClosed = c.status === 'Closed';
+
+                    tbody.innerHTML += `
             <tr data-complaint-id="${c.complaint_id}">
               <td>${c.complaint_id}</td>
               <td>${c.citizen_name}</td>
-              <td>${c.route_name || ''}</td>
+              <td>${c.route_name || 'N/A'}</td>
               <td>${c.description}</td>
-              <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g,'-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+              <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g, '-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
               <td>
                 <div class="assign-form">
                   <select class="emp-select">${empOptions}</select>
@@ -121,82 +116,108 @@
                 </button>
               </td>
             </tr>`;
+                });
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error loading data.</td></tr>';
+            }
+        }
+
+        // --- NEW: Function to load department summary view ---
+        async function loadDepartmentSummary() {
+            const table = document.getElementById('deptSummaryTable');
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '<tr><td colspan="3" class="loader-container"><span class="loader"></span></td></tr>';
+            try {
+                const res = await fetch('/api/views/v_department_summary');
+                const data = await res.json();
+                tbody.innerHTML = '';
+
+                // Filter data to only show the manager's department (client-side)
+                const myDeptRes = await fetch('/api/me');
+                const me = await myDeptRes.json();
+                const myDeptData = data.filter(d => d.dept_id === me.dept_id);
+
+                if (myDeptData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3">No summary data available.</td></tr>`;
+                    return;
+                }
+
+                myDeptData.forEach(d => {
+                    tbody.innerHTML += `
+                    <tr>
+                        <td>${d.department_name}</td>
+                        <td>${d.total_employees}</td>
+                        <td>${d.total_vehicles}</td>
+                    </tr>
+                `;
+                });
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="3" style="color:red;">Error loading summary.</td></tr>';
+            }
+        }
+
+        // --- Event Delegation (No Change) ---
+        document.querySelector('#mgrComplaintsTable tbody').addEventListener('click', async function (e) {
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            const complaintId = row.dataset.complaintId;
+
+            if (e.target.classList.contains('reassign-btn')) {
+                const empId = row.querySelector('.emp-select').value;
+                if (!empId) return showMessage('Please select an employee.', 'error');
+                const payload = { emp_id: Number(empId) };
+                try {
+                    const res = await fetch(`/api/complaints/${complaintId}/assign`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const body = await res.json();
+                    if (res.ok) {
+                        showMessage('Re-assigned successfully!');
+                        loadPendingComplaints(); // Refresh
+                    } else {
+                        showMessage(body.error || 'Re-assign failed', 'error');
+                    }
+                } catch (err) {
+                    showMessage('Network error', 'error');
+                }
+            }
+
+            if (e.target.classList.contains('close-btn')) {
+                if (!confirm('Are you sure you want to close this task? This is final.')) return;
+                try {
+                    const res = await fetch(`/api/complaints/${complaintId}/status`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'Closed' })
+                    });
+                    const body = await res.json();
+                    if (res.ok) {
+                        showMessage('Task marked as Closed!');
+                        loadPendingComplaints(); // Refresh
+                    } else {
+                        showMessage(body.error || 'Failed to close', 'error');
+                    }
+                } catch (err) {
+                    showMessage('Network error', 'error');
+                }
+            }
         });
-      } catch (e) {
-        console.error(e);
-        tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error loading data.</td></tr>';
-      }
-    }
 
-    // --- NEW: Event Delegation for Buttons ---
-    document.querySelector('#mgrComplaintsTable tbody').addEventListener('click', async function(e) {
-      const row = e.target.closest('tr');
-      if (!row) return;
-      
-      const complaintId = row.dataset.complaintId;
+        // --- Logout Button (No Change) ---
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await fetch('/api/logout', { method: 'POST' });
+            alert('You have been logged out.');
+            window.location.href = '/welcome.html';
+        });
 
-      // Handle Re-assign
-      if (e.target.classList.contains('reassign-btn')) {
-        const empId = row.querySelector('.emp-select').value;
-        // const vehId = row.querySelector('.veh-select').value; // Uncomment if using vehicle
-        
-        if (!empId) return showMessage('Please select an employee.', 'error');
-
-        const payload = { 
-          emp_id: Number(empId),
-          // vehicle_id: Number(vehId) // Uncomment if using vehicle
-        };
-
-        try {
-          const res = await fetch(`/api/complaints/${complaintId}/assign`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const body = await res.json();
-          if (res.ok) {
-            showMessage('Re-assigned successfully!');
-            loadComplaints(); // Refresh
-          } else {
-            showMessage(body.error || 'Re-assign failed', 'error');
-          }
-        } catch (err) {
-          showMessage('Network error', 'error');
-        }
-      }
-
-      // Handle Mark Closed
-      if (e.target.classList.contains('close-btn')) {
-        if (!confirm('Are you sure you want to close this task? This is final.')) return;
-        
-        try {
-          const res = await fetch(`/api/complaints/${complaintId}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'Closed' })
-          });
-          const body = await res.json();
-          if (res.ok) {
-            showMessage('Task marked as Closed!');
-            loadComplaints(); // Refresh
-          } else {
-            showMessage(body.error || 'Failed to close', 'error');
-          }
-        } catch (err) {
-          showMessage('Network error', 'error');
-        }
-      }
-    });
-
-    // --- NEW: Logout Button ---
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST' });
-      alert('You have been logged out.');
-      window.location.href = '/welcome.html';
-    });
-
-    // --- Initial Load ---
-    checkLogin();
-  </script>
+        // --- Initial Load ---
+        checkLogin();
+    </script>
 </body>
+
 </html>
