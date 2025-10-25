@@ -152,9 +152,10 @@
             const payload = {
                 citizen_name: form.citizen_name.value,
                 contact_no: form.contact_no.value,
-                location: form.location.value,
+                location: form.location.value, // You might want to remove this if route_id is enough
                 description: form.description.value,
-                route_id: form.route_id && form.route_id.value ? Number(form.route_id.value) : null
+                route_id: form.route_id && form.route_id.value ? Number(form.route_id.value) : null,
+                dept_id: form.dept_id && form.dept_id.value ? Number(form.dept_id.value) : null // <-- ADD THIS LINE
             };
             try {
                 const res = await fetch('/api/complaints', {

@@ -297,7 +297,7 @@
     </div>
 
     <!-- JavaScript (unchanged) -->
-    <script>
+<script>
         function showSignUp() {
             document.getElementById('sign-in-form').style.display = 'none';
             document.getElementById('sign-up-form').style.display = 'block';
@@ -309,6 +309,40 @@
             document.getElementById('sign-in-form').style.display = 'block';
             document.getElementById('form-title').textContent = 'Sign In';
         }
+
+        // --- NEW LOGIN SCRIPT ---
+        document.getElementById('sign-in-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            const payload = { email, password };
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const body = await res.json();
+
+                if (res.ok) {
+                    alert('Login successful! Welcome, ' + body.name);
+                    // Redirect based on role
+                    if (body.role === 'Manager') {
+                        window.location.href = '/manager.html';
+                    } else if (body.role === 'Employee') {
+                        window.location.href = '/employee.html';
+                    } else {
+                        window.location.href = '/'; // Fallback
+                    }
+                } else {
+                    alert('Login Failed: ' + body.error);
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                alert('An error occurred. Please try again.');
+            }
+        });
     </script>
 </body>
 </html>

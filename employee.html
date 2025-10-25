@@ -7,13 +7,24 @@
 </head>
 <body>
   <div class="page-container">
-    <h2>Employee Dashboard</h2>
+    <h2>Employee Dashboard <span id="empName"></span></h2>
+    <button id="logoutBtn" style="padding: 0.5rem 1rem; cursor: pointer; margin-bottom: 1rem;">Logout</button>
+
+    <div id="message-box" role="status" aria-live="polite" style="display:none;"></div>
 
     <div class="card">
-      <h3>Your Assigned Tasks (recent)</h3>
+      <h3>Your Assigned Tasks</h3>
       <div class="table-scroll-wrapper">
         <table id="empTasksTable">
-          <thead><tr><th>ID</th><th>Route</th><th>Description</th><th>Status</th></tr></thead>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Route</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -31,19 +42,87 @@
   </div>
 
   <script>
-    async function loadTasks() {
-      // For demo: load complaints assigned to anyone (ideally filter by emp)
+    const msgBox = document.getElementById('message-box');
+
+    // --- NEW: Message function ---
+    function showMessage(text, type = 'success', timeout = 3000) {
+      msgBox.className = '';
+      msgBox.style.display = 'block';
+      msgBox.textContent = text;
+      msgBox.classList.add(type === 'error' ? 'message-error' : 'message-success');
+      if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
+    }
+
+    // --- NEW: Login Check ---
+    async function checkLogin() {
       try {
+        const res = await fetch('/api/me');
+        const body = await res.json();
+        if (!res.ok || body.role !== 'Employee') {
+          window.location.href = '/auth.html';
+        }
+        document.getElementById('empName').textContent = `(${body.name})`;
+      } catch (e) {
+        window.location.href = '/auth.html';
+      }
+    }
+
+    // --- REVISED: Load Tasks ---
+    async function loadTasks() {
+      try {
+        // The backend now filters this automatically based on our session
         const res = await fetch('/api/complaints');
         const data = await res.json();
         const tb = document.querySelector('#empTasksTable tbody');
         tb.innerHTML = '';
-        data.filter(c=>c.assigned_emp).forEach(c=>{
-          tb.innerHTML += `<tr><td>${c.complaint_id}</td><td>${c.route_name||''}</td><td>${c.description}</td><td>${c.status}</td></tr>`;
+        if (data.length === 0) {
+          tb.innerHTML = '<tr><td colspan="5">No tasks assigned.</td></tr>';
+          return;
+        }
+
+        data.forEach(c => {
+          const isDone = c.status === 'Resolved' || c.status === 'Closed';
+          tb.innerHTML += `<tr>
+            <td>${c.complaint_id}</td>
+            <td>${c.route_name || ''}</td>
+            <td>${c.description}</td>
+            <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g,'-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+            <td>
+              <button class="resolve-btn" data-id="${c.complaint_id}" ${isDone ? 'disabled' : ''}>
+                Mark Resolved
+              </button>
+            </td>
+          </tr>`;
         });
       } catch(e) { console.error(e); }
     }
 
+    // --- NEW: Handle Status Update ---
+    document.querySelector('#empTasksTable tbody').addEventListener('click', async function(e) {
+      if (e.target.classList.contains('resolve-btn')) {
+        const complaintId = e.target.dataset.id;
+        if (!confirm('Mark this task as resolved?')) return;
+
+        try {
+          const res = await fetch(`/api/complaints/${complaintId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Resolved' })
+          });
+          const body = await res.json();
+          if (res.ok) {
+            showMessage('Task marked as Resolved!');
+            loadTasks(); // Refresh the list
+          } else {
+            showMessage(body.error || 'Failed to update', 'error');
+          }
+        } catch (err) {
+          showMessage('Network error', 'error');
+        }
+      }
+    });
+
+    // --- UNCHANGED: Waste Form ---
     document.getElementById('wasteForm').addEventListener('submit', async function(e){
       e.preventDefault();
       const f = e.target;
@@ -55,11 +134,23 @@
       try {
         const resp = await fetch('/api/waste', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
         const body = await resp.json();
-        if (resp.ok) { alert('Waste recorded'); f.reset(); loadTasks(); }
-        else alert(body.error || 'Error');
-      } catch(err) { console.error(err); alert('Network error'); }
+        if (resp.ok) { 
+          showMessage('Waste recorded'); 
+          f.reset();
+        }
+        else showMessage(body.error || 'Error', 'error');
+      } catch(err) { console.error(err); showMessage('Network error', 'error'); }
     });
 
+    // --- NEW: Logout Button ---
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      alert('You have been logged out.');
+      window.location.href = '/welcome.html';
+    });
+
+    // --- Initial Load ---
+    checkLogin();
     loadTasks();
   </script>
 </body>

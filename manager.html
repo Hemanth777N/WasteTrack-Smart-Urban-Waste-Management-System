@@ -7,16 +7,25 @@
 </head>
 <body>
   <div class="page-container">
-    <h2>Manager Dashboard</h2>
+    <h2>Manager Dashboard <span id="mgrName"></span></h2>
+    <button id="logoutBtn" style="padding: 0.5rem 1rem; cursor: pointer; margin-bottom: 1rem;">Logout</button>
 
-    <div id="mgr-message" class="message-success" style="display:none;"></div>
+    <div id="mgr-message" style="display:none;"></div>
 
     <div class="card">
-      <h3>All Complaints</h3>
+      <h3>Department Complaints</h3>
       <div class="table-scroll-wrapper">
         <table id="mgrComplaintsTable">
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Route</th><th>Description</th><th>Status</th><th>Assign</th></tr>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Route</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Re-assign</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -25,61 +34,169 @@
   </div>
 
   <script>
-    async function loadComplaints() {
-      const tbody = document.querySelector('#mgrComplaintsTable tbody');
-      tbody.innerHTML = '<tr><td colspan="6" class="loader-container"><span class="loader"></span></td></tr>';
+    const msgBox = document.getElementById('mgr-message');
+    
+    // --- NEW: Message function ---
+    function showMessage(text, type = 'success', timeout = 3000) {
+      msgBox.className = '';
+      msgBox.style.display = 'block';
+      msgBox.textContent = text;
+      msgBox.classList.add(type === 'error' ? 'message-error' : 'message-success');
+      if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
+    }
+
+    // --- NEW: Login Check ---
+    async function checkLogin() {
       try {
-        const res = await fetch('/api/complaints');
-        const data = await res.json();
-        tbody.innerHTML = '';
-        data.forEach(c => {
-          tbody.innerHTML += `<tr>
-            <td>${c.complaint_id}</td>
-            <td>${c.citizen_name}</td>
-            <td>${c.route_name || ''}</td>
-            <td>${c.description}</td>
-            <td>${c.status}</td>
-            <td>
-              <div class="assign-form" data-complaint="${c.complaint_id}">
-                <select class="emp-select"><option value="">Employee</option></select>
-                <select class="veh-select"><option value="">Vehicle</option></select>
-                <button class="assign-btn">Assign</button>
-              </div>
-            </td>
-          </tr>`;
-        });
-        // populate selects
-        const empRes = await fetch('/api/employees');
-        const emps = await empRes.json();
-        const vehRes = await fetch('/api/vehicles');
-        const vehs = await vehRes.json();
-        document.querySelectorAll('.assign-form').forEach(form => {
-          const empSel = form.querySelector('.emp-select');
-          const vehSel = form.querySelector('.veh-select');
-          emps.forEach(e => empSel.appendChild(new Option(e.name, e.emp_id)));
-          vehs.forEach(v => vehSel.appendChild(new Option(v.vehicle_no, v.vehicle_id)));
-          form.querySelector('.assign-btn').addEventListener('click', async () => {
-            const complaintId = form.dataset.complaint;
-            const empId = empSel.value;
-            const vehId = vehSel.value;
-            if (!empId || !vehId) return alert('Select employee and vehicle');
-            const payload = { emp_id: Number(empId), vehicle_id: Number(vehId), complaint_id: Number(complaintId) };
-            const resp = await fetch('/api/assign', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-            const body = await resp.json();
-            if (resp.ok) {
-              document.getElementById('mgr-message').textContent = 'Assigned successfully'; document.getElementById('mgr-message').style.display='block';
-              loadComplaints();
-            } else {
-              alert(body.error || 'Assign failed');
-            }
-          });
-        });
+        const res = await fetch('/api/me');
+        const body = await res.json();
+        if (!res.ok || body.role !== 'Manager') {
+          window.location.href = '/auth.html';
+        }
+        document.getElementById('mgrName').textContent = `(${body.name})`;
+        // Once logged in, load complaints and dropdown data
+        loadComplaints();
+        loadDropdownData();
       } catch (e) {
-        console.error(e);
+        window.location.href = '/auth.html';
       }
     }
 
-    loadComplaints();
+    // --- Store dropdown data globally ---
+    let allEmployees = [];
+    let allVehicles = [];
+
+    async function loadDropdownData() {
+      try {
+        // Fetches employees/vehicles for the manager's department (backend handles filtering)
+        const [empRes, vehRes] = await Promise.all([
+          fetch('/api/employees?role=Employee'), 
+          fetch('/api/vehicles')
+        ]);
+        allEmployees = await empRes.json();
+        allVehicles = await vehRes.json();
+      } catch (e) {
+        console.error('Failed to load dropdown data', e);
+      }
+    }
+
+    // --- REVISED: Load Complaints ---
+    async function loadComplaints() {
+      const tbody = document.querySelector('#mgrComplaintsTable tbody');
+      tbody.innerHTML = '<tr><td colspan="7" class="loader-container"><span class="loader"></span></td></tr>';
+      try {
+        // Backend filters complaints by manager's dept_id
+        const res = await fetch('/api/complaints');
+        const data = await res.json();
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7">No complaints found for this department.</td></tr>';
+          return;
+        }
+
+        data.forEach(c => {
+          const empOptions = allEmployees.map(e => `<option value="${e.emp_id}" ${e.emp_id === c.assigned_emp ? 'selected' : ''}>${e.name}</option>`).join('');
+          const vehOptions = allVehicles.map(v => `<option value="${v.vehicle_id}">${v.vehicle_no}</option>`).join('');
+
+          const isResolved = c.status === 'Resolved';
+          const isClosed = c.status === 'Closed';
+
+          tbody.innerHTML += `
+            <tr data-complaint-id="${c.complaint_id}">
+              <td>${c.complaint_id}</td>
+              <td>${c.citizen_name}</td>
+              <td>${c.route_name || ''}</td>
+              <td>${c.description}</td>
+              <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g,'-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+              <td>
+                <div class="assign-form">
+                  <select class="emp-select">${empOptions}</select>
+                  <button class="reassign-btn" ${isClosed ? 'disabled' : ''}>Re-assign</button>
+                </div>
+              </td>
+              <td>
+                <button class="close-btn" ${isResolved ? '' : 'disabled'}>
+                  Mark Closed
+                </button>
+              </td>
+            </tr>`;
+        });
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error loading data.</td></tr>';
+      }
+    }
+
+    // --- NEW: Event Delegation for Buttons ---
+    document.querySelector('#mgrComplaintsTable tbody').addEventListener('click', async function(e) {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      
+      const complaintId = row.dataset.complaintId;
+
+      // Handle Re-assign
+      if (e.target.classList.contains('reassign-btn')) {
+        const empId = row.querySelector('.emp-select').value;
+        // const vehId = row.querySelector('.veh-select').value; // Uncomment if using vehicle
+        
+        if (!empId) return showMessage('Please select an employee.', 'error');
+
+        const payload = { 
+          emp_id: Number(empId),
+          // vehicle_id: Number(vehId) // Uncomment if using vehicle
+        };
+
+        try {
+          const res = await fetch(`/api/complaints/${complaintId}/assign`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const body = await res.json();
+          if (res.ok) {
+            showMessage('Re-assigned successfully!');
+            loadComplaints(); // Refresh
+          } else {
+            showMessage(body.error || 'Re-assign failed', 'error');
+          }
+        } catch (err) {
+          showMessage('Network error', 'error');
+        }
+      }
+
+      // Handle Mark Closed
+      if (e.target.classList.contains('close-btn')) {
+        if (!confirm('Are you sure you want to close this task? This is final.')) return;
+        
+        try {
+          const res = await fetch(`/api/complaints/${complaintId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Closed' })
+          });
+          const body = await res.json();
+          if (res.ok) {
+            showMessage('Task marked as Closed!');
+            loadComplaints(); // Refresh
+          } else {
+            showMessage(body.error || 'Failed to close', 'error');
+          }
+        } catch (err) {
+          showMessage('Network error', 'error');
+        }
+      }
+    });
+
+    // --- NEW: Logout Button ---
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      alert('You have been logged out.');
+      window.location.href = '/welcome.html';
+    });
+
+    // --- Initial Load ---
+    checkLogin();
   </script>
 </body>
 </html>
