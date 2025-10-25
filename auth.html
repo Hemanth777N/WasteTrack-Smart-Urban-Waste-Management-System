@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In / Sign Up - WasteTrack</title>
     
-    <!-- Added Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-    <style>
+    <link rel="stylesheet" href="style.css"> <style>
         /* --- Import Google Font (Same as welcome page) --- */
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
@@ -23,11 +21,6 @@
             --bg-gradient-end: #f8f9fa;
             --border-light: #dddddd;
             --shadow-color: rgba(0, 0, 0, 0.1);
-            /* --- New Icon Button Colors --- */
-            --admin-blue: #3498db;
-            --admin-blue-dark: #2980b9;
-            --employee-orange: #e67e22;
-            --employee-orange-dark: #d35400;
         }
 
         /* --- Global Reset & Body Styling --- */
@@ -147,84 +140,7 @@
             color: var(--primary-green);
             text-decoration: underline;
         }
-
-        /* --- NEW STYLES FOR ADMIN/EMPLOYEE ICONS --- 
-        */
-
-        /* --- Divider "Or sign in as" --- */
-        .alternative-login-divider {
-            font-size: 0.9rem;
-            color: var(--text-light);
-            margin: 1.5rem 0 1rem;
-            position: relative;
-            /* Creates the horizontal lines */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .alternative-login-divider::before,
-        .alternative-login-divider::after {
-            content: '';
-            flex-grow: 1;
-            height: 1px;
-            background-color: var(--border-light);
-            margin: 0 0.5rem;
-        }
-
-        /* --- Container for the two icon buttons --- */
-        .alternative-login-options {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem; /* Adds space between buttons */
-            width: 100%;
-        }
-
-        /* --- Base style for both icon buttons --- */
-        .alt-login-btn {
-            flex-grow: 1; /* Each button takes up half the space */
-            font-family: 'Poppins', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: 0.6rem 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            
-            /* Align icon and text */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .alt-login-btn i {
-            margin-right: 8px; /* Space between icon and text */
-            font-size: 1.1em; /* Make icon slightly larger than text */
-        }
-
-        /* --- Admin Button Specific Style --- */
-        .admin-btn {
-            background-color: var(--admin-blue);
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
-        }
-        .admin-btn:hover {
-            background-color: var(--admin-blue-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-        }
-
-        /* --- Employee Button Specific Style --- */
-        .employee-btn {
-            background-color: var(--employee-orange);
-            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2);
-        }
-        .employee-btn:hover {
-            background-color: var(--employee-orange-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(230, 126, 34, 0.3);
-        }
+        
         /* --- Animation Keyframes (Same as welcome page) --- */
         @keyframes fadeInSlideUp {
             from {
@@ -242,7 +158,6 @@
     <div class="container" id="auth-container">
         <h2 id="form-title">Sign In</h2>
         
-        <!-- Sign In Form -->
         <form id="sign-in-form">
             <div class="form-group">
                 <label for="signin-email">Email</label>
@@ -254,30 +169,9 @@
             </div>
             <button type="submit" class="auth-btn">Sign In</button>
 
-            <!-- 
-            --- NEW HTML FOR ADMIN/EMPLOYEE ICONS --- 
-            -->
-            <div class="alternative-login-divider">
-                <span>Or sign in as</span>
-            </div>
-            <div class="alternative-login-options">
-                <!-- Admin Button -->
-                <button type="button" class="alt-login-btn admin-btn">
-                    <i class="fas fa-user-shield"></i> Admin
-                </button>
-                <!-- Employee Button -->
-                <button type="button" class="alt-login-btn employee-btn">
-                    <i class="fas fa-user-briefcase"></i> Employee
-                </button>
-            </div>
-            <!-- 
-            --- END OF NEW HTML --- 
-            -->
-
             <span class="switch-link" onclick="showSignUp()">Don't have an account? Sign Up</span>
         </form>
 
-        <!-- Sign Up Form (unchanged) -->
         <form id="sign-up-form" style="display:none;">
             <div class="form-group">
                 <label for="signup-name">Name</label>
@@ -296,7 +190,6 @@
         </form>
     </div>
 
-    <!-- JavaScript (unchanged) -->
 <script>
         function showSignUp() {
             document.getElementById('sign-in-form').style.display = 'none';
@@ -310,7 +203,7 @@
             document.getElementById('form-title').textContent = 'Sign In';
         }
 
-        // --- NEW LOGIN SCRIPT ---
+        // --- UPDATED LOGIN SCRIPT ---
         document.getElementById('sign-in-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const email = document.getElementById('signin-email').value;
@@ -340,6 +233,35 @@
                 }
             } catch (err) {
                 console.error('Login error:', err);
+                alert('An error occurred. Please try again.');
+            }
+        });
+
+        // --- NEW SIGN-UP SCRIPT ---
+        document.getElementById('sign-up-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            const payload = { name, email, password };
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const body = await res.json();
+
+                if (res.ok) {
+                    alert('Sign up successful! You can now sign in.');
+                    showSignIn(); // Switch back to the sign-in form
+                } else {
+                    alert('Sign Up Failed: ' + body.error);
+                }
+            } catch (err) {
+                console.error('Sign up error:', err);
                 alert('An error occurred. Please try again.');
             }
         });

@@ -21,6 +21,10 @@
     --bg-gradient-end: #f8f9fa;
     --border-light: #dddddd;
     --shadow-color: rgba(0, 0, 0, 0.1);
+    
+    /* --- NEW COLOR FOR STAFF BUTTON --- */
+    --staff-gray: #778ca3; 
+    --staff-gray-dark: #5a6b80;
 }
 
 /* --- Global Reset & Body Styling --- */
@@ -32,11 +36,8 @@
 
 body {
     font-family: 'Poppins', sans-serif;
-    /* Consistent gradient background */
     background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
     color: var(--text-dark);
-    
-    /* Center all content */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -44,62 +45,37 @@ body {
 }
 
 /* --- Main Card Styling (for .container) --- */
-/* This will style your welcome card AND the auth form card */
-.container,
-#auth-container {
+.container {
     background: var(--bg-light);
     padding: 2.5rem 3rem;
     border-radius: 12px;
     box-shadow: 0 10px 30px var(--shadow-color);
     text-align: center;
     width: 90%;
-    
-    /* Animation for a smooth entrance */
+    max-width: 450px;
     animation: fadeInSlideUp 0.8s ease-out forwards;
     opacity: 0;
 }
 
-/* Specific widths for different cards */
-.container { /* Welcome card */
-    max-width: 450px;
-}
-
-#auth-container { /* Auth card */
-    max-width: 400px;
-    text-align: left; /* Auth forms look better left-aligned */
-}
-#auth-container h2 { /* Center the title on auth page */
-    text-align: center;
-}
-
-
 /* --- Typography --- */
-h1, h2 {
+h1 {
     font-size: 2rem;
     font-weight: 700;
     color: var(--primary-green);
     margin-bottom: 0.75rem;
 }
 
-/* Auth page title gets a bit more space */
-#form-title {
-    margin-bottom: 2rem;
-}
-
 p {
     font-size: 1rem;
     color: var(--text-light);
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem; /* Increased margin */
 }
 
-/* --- Button Styling (for .btn and .auth-btn) --- */
-.btn,
-.auth-btn {
-    /* Link-specific styles */
-    display: inline-block; /* Allows <a> tag to have padding */
-    text-decoration: none; /* Removes underline from <a> tag */
-
-    /* Font and Text */
+/* --- Button Styling (for .btn) --- */
+.btn {
+    display: block; /* Make buttons stack vertically */
+    width: 100%;
+    text-decoration: none;
     font-family: 'Poppins', sans-serif;
     font-size: 1rem;
     font-weight: 600;
@@ -107,125 +83,49 @@ p {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     text-align: center;
-    
-    /* Box Model */
     background-color: var(--primary-green);
     border: none;
     border-radius: 8px;
     padding: 0.8rem 2.5rem;
     cursor: pointer;
-    
-    /* Shadow and transition */
     box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
     transition: all 0.3s ease;
 }
 
-/* Full-width button for auth forms */
-.auth-btn {
-    width: 100%;
-    margin-top: 1rem;
+/* --- NEW: Container for the buttons --- */
+.welcome-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* Space between buttons */
 }
 
-/* --- Button Interactions (UX Improvement) --- */
+
 .btn:hover,
-.auth-btn:hover,
-.btn:focus,
-.auth-btn:focus {
+.btn:focus {
     background-color: var(--primary-green-dark);
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
     outline: none;
-    color: #ffffff; /* Ensure text stays white */
+    color: #ffffff;
 }
 
-.btn:active,
-.auth-btn:active {
+/* --- NEW: Style for the second button --- */
+.btn.staff-login {
+    background-color: var(--staff-gray);
+    box-shadow: 0 4px 15px rgba(119, 140, 163, 0.2);
+}
+
+.btn.staff-login:hover,
+.btn.staff-login:focus {
+     background-color: var(--staff-gray-dark);
+     box-shadow: 0 6px 20px rgba(119, 140, 163, 0.3);
+}
+
+
+.btn:active {
     transform: translateY(0);
-    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
 }
 
-/* --- Login Type Icons --- */
-.login-type-container {
-    display: flex;
-    justify-content: space-around;
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.login-type {
-    cursor: pointer;
-    padding: 1rem;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.login-type:hover {
-    background: rgba(46, 204, 113, 0.1);
-}
-
-.login-type i {
-    font-size: 2rem;
-    color: var(--primary-green);
-    margin-bottom: 0.5rem;
-    display: block;
-}
-
-.login-type span {
-    font-size: 0.9rem;
-    color: var(--text-dark);
-    font-weight: 600;
-}
-
-.login-type.active {
-    background: rgba(46, 204, 113, 0.1);
-}
-
-/* --- Auth Form Specifics (from last time) --- */
-.form-group {
-    margin-bottom: 1.5rem;
-    text-align: left;
-}
-
-.form-group label {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    font-family: 'Poppins', sans-serif;
-    color: var(--text-dark);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-group input:focus {
-    outline: none;
-    border-color: var(--primary-green);
-    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
-}
-
-.switch-link {
-    display: block;
-    margin-top: 1.5rem;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    cursor: pointer;
-    text-decoration: none;
-    transition: color 0.3s ease;
-    text-align: center;
-}
-
-.switch-link:hover {
-    color: var(--primary-green);
-    text-decoration: underline;
-}
 
 /* --- Animation Keyframes --- */
 @keyframes fadeInSlideUp {
@@ -238,16 +138,17 @@ p {
         transform: translateY(0);
     }
 }
-
-
-
     </style>
     </head>
 <body>
     <div class="container">
-        <h1>Welcome</h1>
-        <p>Waste Collection and Vehicle Management System</p>
-        <a href="auth.html" class="btn">Proceed</a>
+        <h1>Welcome to WasteTrack</h1>
+        <p>Manage complaints or log in to your staff portal.</p>
+        
+        <div class="welcome-buttons">
+            <a href="complaint.html" class="btn">Submit Complaint</a>
+            <a href="auth.html" class="btn staff-login">Staff Login</a>
+        </div>
     </div>
 </body>
 </html>

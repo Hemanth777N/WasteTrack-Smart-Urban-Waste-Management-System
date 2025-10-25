@@ -38,7 +38,6 @@ app.use(
 );
 
 // --- Auth Middleware ---
-// Protects routes that require a login
 const checkAuth = (req, res, next) => {
   if (!req.session.emp_id) {
     return res.status(401).json({ error: "Not authenticated" });
@@ -46,7 +45,6 @@ const checkAuth = (req, res, next) => {
   next();
 };
 
-// Manager-only middleware
 const checkManager = (req, res, next) => {
   if (req.session.role !== "Manager") {
     return res.status(403).json({ error: "Not authorized" });
@@ -55,18 +53,47 @@ const checkManager = (req, res, next) => {
 };
 
 // --- Static Frontend Files ---
-// Serve static files (CSS, etc.) from the root directory
 app.use(express.static(__dirname));
 
 // --- Page Routes ---
-// GET / (Root) - Serve the welcome page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "welcome.html"));
 });
 
 // --- API Auth Routes ---
 
-// POST /api/login - Handle user login
+// NEW: POST /api/register - Handle new user sign-up
+app.post("/api/register", async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  try {
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Insert new employee
+    // They get 'Employee' role by default. A manager can change it later.
+    const [result] = await pool.query(
+      `INSERT INTO Employee (name, email, password, role, status)
+       VALUES (?, ?, ?, 'Employee', 'Active')`,
+      [name, email, hashedPassword]
+    );
+
+    res.json({ message: "Registration successful", emp_id: result.insertId });
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "Email already exists" });
+    }
+    console.error("Registration error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// UPDATED: POST /api/login - Now with secure password checking
 app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -83,21 +110,14 @@ app.post("/api/login", async (req, res) => {
     }
     const user = rows[0];
 
-    // TODO: Implement password hashing.
-    // For now, we'll compare plaintext.
-    // In a real app, use bcrypt:
-    // const isMatch = await bcrypt.compare(password, user.password);
-    // if (!isMatch) {
-    //   return res.status(401).json({ error: "Invalid credentials" });
-    // }
+    // --- SECURE CHECK ---
+    // Compare submitted password with the hashed password in the database
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    // For demo (assuming plaintext passwords or update your DB with hashed ones)
-    if (password !== user.password) {
-       // Note: You should HASH passwords. This is unsafe for production.
-       // E.g., Use bcryptjs.hashSync('password123', 10) to create a hash
-       // and store that in your DB.
-       return res.status(401).json({ error: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid credentials" });
     }
+    // --- END SECURE CHECK ---
 
     // Store user info in session
     req.session.emp_id = user.emp_id;
@@ -116,18 +136,18 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// POST /api/logout - Handle user logout
+// POST /api/logout
 app.post("/api/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) {
       return res.status(500).json({ error: "Could not log out" });
     }
-    res.clearCookie("connect.sid"); // Clear the session cookie
+    res.clearCookie("connect.sid");
     res.json({ message: "Logout successful" });
   });
 });
 
-// GET /api/me - Get current logged-in user's info
+// GET /api/me
 app.get("/api/me", checkAuth, (req, res) => {
   res.json({
     emp_id: req.session.emp_id,
@@ -139,7 +159,7 @@ app.get("/api/me", checkAuth, (req, res) => {
 
 // --- API Data Routes ---
 
-// GET /api/complaints - REVISED to filter based on role
+// GET /api/complaints
 app.get("/api/complaints", async (req, res) => {
   try {
     let sql = `SELECT c.*, r.route_name
@@ -147,7 +167,6 @@ app.get("/api/complaints", async (req, res) => {
                LEFT JOIN Route r ON c.route_id = r.route_id`;
     const params = [];
 
-    // Filter based on logged-in user session
     if (req.session.emp_id) {
       if (req.session.role === "Manager") {
         sql += " WHERE c.dept_id = ?";
@@ -157,7 +176,6 @@ app.get("/api/complaints", async (req, res) => {
         params.push(req.session.emp_id);
       }
     }
-    // If no session, it returns all (for stats page, etc.)
 
     sql += " ORDER BY c.complaint_id DESC";
     const [rows] = await pool.query(sql, params);
@@ -168,13 +186,13 @@ app.get("/api/complaints", async (req, res) => {
   }
 });
 
-// POST /api/complaints - REVISED for auto-assignment
+// POST /api/complaints
 app.post("/api/complaints", async (req, res) => {
   const { citizen_name, contact_no, location, description, route_id, dept_id } =
     req.body;
 
-  if (!citizen_name || !contact_no || !location || !description || !dept_id) {
-    return res.status(400).json({ error: "Missing required fields" });
+  if (!citizen_name || !contact_no || !description || !dept_id) {
+    return res.status(400).json({ error: "Name, contact, description, and department are required" });
   }
 
   let connection;
@@ -182,7 +200,6 @@ app.post("/api/complaints", async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    // 1. Find the least-busy employee in that department
     const [employees] = await connection.query(
       `SELECT e.emp_id, COUNT(c.complaint_id) AS task_count
        FROM Employee e
@@ -202,14 +219,13 @@ app.post("/api/complaints", async (req, res) => {
     }
     const bestEmployeeId = employees[0].emp_id;
 
-    // 2. Insert the complaint, auto-assigning it
     const [result] = await connection.query(
       `INSERT INTO Complaints (citizen_name, contact_no, location, description, route_id, dept_id, assigned_emp, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'In Progress')`,
       [
         citizen_name,
         contact_no,
-        location,
+        location || 'N/A', // Make location optional
         description,
         route_id || null,
         dept_id,
@@ -228,16 +244,15 @@ app.post("/api/complaints", async (req, res) => {
   }
 });
 
-// PUT /api/complaints/:id/status - NEW route
+// PUT /api/complaints/:id/status
 app.put("/api/complaints/:id/status", checkAuth, async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body; // e.g., "Resolved" or "Closed"
+  const { status } = req.body; 
 
   if (!status) {
     return res.status(400).json({ error: "Status is required" });
   }
 
-  // Security check: Only manager can "Close", employee can "Resolve"
   if (status === "Closed" && req.session.role !== "Manager") {
     return res.status(403).json({ error: "Only managers can close tasks" });
   }
@@ -254,7 +269,7 @@ app.put("/api/complaints/:id/status", checkAuth, async (req, res) => {
   }
 });
 
-// PUT /api/complaints/:id/assign - REVISED from POST /api/assign
+// PUT /api/complaints/:id/assign
 app.put("/api/complaints/:id/assign", checkAuth, checkManager, async (req, res) => {
     const { id } = req.params;
     const { emp_id, vehicle_id } = req.body;
@@ -264,16 +279,10 @@ app.put("/api/complaints/:id/assign", checkAuth, checkManager, async (req, res) 
     }
 
     try {
-      // Re-assign the employee
       await pool.query(
         "UPDATE Complaints SET assigned_emp = ?, status = 'In Progress' WHERE complaint_id = ?",
         [emp_id, id]
       );
-      
-      // Optionally, update the vehicle assignment
-      // This logic depends on your schema. Assuming you want to log it in Assigned_To
-      // For this plan, we just update the complaint.
-      // If you need to update Assigned_To, that logic would go here.
       
       res.json({ message: "Re-assigned successfully" });
     } catch (err) {
@@ -283,7 +292,7 @@ app.put("/api/complaints/:id/assign", checkAuth, checkManager, async (req, res) 
   }
 );
 
-// POST /api/waste - No changes needed
+// POST /api/waste
 app.post("/api/waste", checkAuth, async (req, res) => {
   const { route_id, waste_type, weight_kg, collection_date } = req.body;
   if (!route_id || !weight_kg)
@@ -295,7 +304,7 @@ app.post("/api/waste", checkAuth, async (req, res) => {
         route_id,
         waste_type || null,
         weight_kg,
-        collection_date || null,
+        collection_date || new Date(), // Use current date if not provided
       ]
     );
     res.json({ message: "Waste recorded", record_id: result.insertId });
@@ -313,30 +322,6 @@ app.get("/api/departments", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("Error fetching departments:", err);
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
-app.get("/api/routes", async (req, res) => {
-  try {
-    const deptId = req.query.dept_id;
-    if (deptId) {
-      const [rows] = await pool.query(
-        `SELECT DISTINCT r.*
-         FROM Route r
-         JOIN Serves s ON r.route_id = s.route_id
-         JOIN Vehicle v ON s.vehicle_id = v.vehicle_id
-         WHERE v.dept_id = ?
-         ORDER BY r.route_name`,
-        [deptId]
-      );
-      return res.json(rows);
-    } else {
-      const [rows] = await pool.query("SELECT * FROM Route ORDER BY route_name");
-      return res.json(rows);
-    }
-  } catch (err) {
-    console.error("Error fetching routes:", err);
     res.status(500).json({ error: "Database error" });
   }
 });
@@ -367,11 +352,10 @@ app.get("/api/employees", checkAuth, async (req, res) => {
     const params = [];
     const clauses = [];
     
-    // Default to manager's own department if not specified
     const searchDept = dept_id || (req.session.role === 'Manager' ? req.session.dept_id : null);
 
     if (role) {
-      clauses.push("job_title = ?");
+      clauses.push("role = ?"); // Use 'role' column
       params.push(role);
     }
     if (searchDept) {
@@ -391,7 +375,6 @@ app.get("/api/employees", checkAuth, async (req, res) => {
 app.get("/api/vehicles", checkAuth, async (req, res) => {
   try {
     const { dept_id } = req.query;
-     // Default to manager's own department if not specified
     const searchDept = dept_id || (req.session.role === 'Manager' ? req.session.dept_id : null);
     
     let sql = "SELECT vehicle_id, vehicle_no, vehicle_type, status, dept_id FROM Vehicle";
