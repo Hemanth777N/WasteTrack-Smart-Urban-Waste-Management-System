@@ -91,18 +91,47 @@ router.put("/complaints/:id/status", checkAuth, async (req, res) => {
   }
 });
 
-// PUT /api/complaints/:id/assign
+// --- UPDATED ASSIGN ENDPOINT ---
 router.put("/complaints/:id/assign", checkAuth, checkManager, async (req, res) => {
   const { id } = req.params;
-  const { emp_id } = req.body;
-  if (!emp_id) return res.status(400).json({ error: "Employee ID is required" });
+  const { emp_id, vehicle_id } = req.body; // <-- UPDATED
+  
+  if (!emp_id || !vehicle_id) { // <-- UPDATED
+    return res.status(400).json({ error: "Employee ID and Vehicle ID are required" });
+  }
+
+  let connection;
   try {
-    await pool.query("UPDATE Complaints SET assigned_emp = ?, status = 'In Progress' WHERE complaint_id = ?", [emp_id, id]);
-    res.json({ message: "Re-assigned successfully" });
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // 1. Update the complaint itself (assign emp, set status)
+    await connection.query(
+      "UPDATE Complaints SET assigned_emp = ?, status = 'In Progress' WHERE complaint_id = ?",
+      [emp_id, id]
+    );
+
+    // 2. Get the route_id from the complaint
+    const [complaintRows] = await connection.query("SELECT route_id FROM Complaints WHERE complaint_id = ?", [id]);
+    const route_id = complaintRows.length ? complaintRows[0].route_id : null;
+
+    // 3. Log this assignment in the Assigned_To table (as per plan)
+    await connection.query(
+      "INSERT INTO Assigned_To (emp_id, vehicle_id, route_id, assign_date) VALUES (?, ?, ?, ?)",
+      [emp_id, vehicle_id, route_id, new Date()]
+    );
+
+    await connection.commit();
+    res.json({ message: "Re-assigned and logged successfully" });
+
   } catch (err) {
+    if (connection) await connection.rollback();
     console.error("Error re-assigning:", err);
     res.status(500).json({ error: "Re-assign failed" });
+  } finally {
+    if (connection) connection.release();
   }
 });
+// --- END UPDATED ENDPOINT ---
 
 module.exports = router;

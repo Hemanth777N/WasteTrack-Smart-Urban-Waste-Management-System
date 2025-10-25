@@ -15,6 +15,27 @@
         <div id="mgr-message" style="display:none;"></div>
 
         <div class="card">
+            <h3>Department Complaints</h3>
+            <div class="table-scroll-wrapper">
+                <table id="mgrComplaintsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Route</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Re-assign</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
             <h3>Your Department Summary (v_department_summary)</h3>
             <div class="table-scroll-wrapper">
                 <table id="deptSummaryTable">
@@ -30,6 +51,7 @@
             </div>
         </div>
     </div>
+
     <script>
         const msgBox = document.getElementById('mgr-message');
 
@@ -41,28 +63,35 @@
             if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
         }
 
-        // --- Inside checkLogin() function in manager.html ---
         async function checkLogin() {
             try {
-                // ... (auth logic) ...
+                const res = await fetch('/api/me');
+                if (!res.ok) throw new Error('Not logged in');
+                const body = await res.json();
+                
+                if (body.role !== 'Manager') {
+                  window.location.href = '/auth.html';
+                  return;
+                }
                 document.getElementById('mgrName').textContent = `(${body.name})`;
-
-                // --- CHANGE THIS LINE ---
-                loadComplaints(); // <-- Change from loadPendingComplaints() back to this
-                // --- END CHANGE ---
-
-                loadDepartmentSummary(); // <-- This one is correct, leave it
-                loadDropdownData();
+                
+                // Load all data
+                await loadDropdownData(); // <-- Wait for this first
+                loadComplaints(); 
+                loadDepartmentSummary(); 
             } catch (e) {
+                console.error(e);
                 window.location.href = '/auth.html';
             }
         }
 
+        // --- Store dropdown data globally ---
         let allEmployees = [];
         let allVehicles = [];
 
         async function loadDropdownData() {
             try {
+                // Fetches employees/vehicles for the manager's department (backend handles filtering)
                 const [empRes, vehRes] = await Promise.all([
                     fetch('/api/employees?role=Employee'),
                     fetch('/api/vehicles')
@@ -73,15 +102,13 @@
                 console.error('Failed to load dropdown data', e);
             }
         }
-
-        // --- REVISED: Load from v_pending_complaints ---
-        // --- REVISED: Load from /api/complaints (NOT the view) ---
+        
+        // --- Load Complaints (Main Table) ---
         async function loadComplaints() {
             const tbody = document.querySelector('#mgrComplaintsTable tbody');
+            if (!tbody) return; 
             tbody.innerHTML = '<tr><td colspan="7" class="loader-container"><span class="loader"></span></td></tr>';
             try {
-                // --- THIS IS THE FIX ---
-                // Fetch from the main API route, which is filtered by the backend.
                 const res = await fetch('/api/complaints');
                 const data = await res.json();
                 tbody.innerHTML = '';
@@ -91,39 +118,44 @@
                     return;
                 }
 
+                // --- MODIFIED SECTION ---
                 data.forEach(c => {
+                    // Generate dropdown options
                     const empOptions = allEmployees.map(e => `<option value="${e.emp_id}" ${e.emp_id === c.assigned_emp ? 'selected' : ''}>${e.name}</option>`).join('');
+                    const vehOptions = allVehicles.map(v => `<option value="${v.vehicle_id}">${v.vehicle_no}</option>`).join('');
 
                     const isResolved = c.status === 'Resolved';
                     const isClosed = c.status === 'Closed';
 
                     tbody.innerHTML += `
-            <tr data-complaint-id="${c.complaint_id}">
-              <td>${c.complaint_id}</td>
-              <td>${c.citizen_name}</td>
-              <td>${c.route_name || 'N/A'}</td>
-              <td>${c.description}</td>
-              <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g, '-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
-              <td>
-                <div class="assign-form">
-                  <select class="emp-select">${empOptions}</select>
-                  <button class="reassign-btn" ${isClosed ? 'disabled' : ''}>Re-assign</button>
-                </div>
-              </td>
-              <td>
-                <button class="close-btn" ${isResolved ? '' : 'disabled'}>
-                  Mark Closed
-                </button>
-              </td>
-            </tr>`;
+                    <tr data-complaint-id="${c.complaint_id}" data-route-id="${c.route_id || ''}">
+                      <td>${c.complaint_id}</td>
+                      <td>${c.citizen_name}</td>
+                      <td>${c.route_name || 'N/A'}</td>
+                      <td>${c.description}</td>
+                      <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g, '-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+                      <td>
+                        <div class="assign-form">
+                          <select class="emp-select" title="Assign Employee">${empOptions}</select>
+                          <select class="veh-select" title="Assign Vehicle">${vehOptions}</select>
+                          <button class="reassign-btn" ${isClosed ? 'disabled' : ''}>Re-assign</button>
+                        </div>
+                      </td>
+                      <td>
+                        <button class="close-btn" ${isResolved ? '' : 'disabled'}>
+                          Mark Closed
+                        </button>
+                      </td>
+                    </tr>`;
                 });
+                // --- END MODIFIED SECTION ---
             } catch (e) {
                 console.error(e);
                 tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error loading data.</td></tr>';
             }
         }
 
-        // --- NEW: Function to load department summary view ---
+        // --- Load Department Summary (View Table) ---
         async function loadDepartmentSummary() {
             const table = document.getElementById('deptSummaryTable');
             const tbody = table.querySelector('tbody');
@@ -133,7 +165,6 @@
                 const data = await res.json();
                 tbody.innerHTML = '';
 
-                // Filter data to only show the manager's department (client-side)
                 const myDeptRes = await fetch('/api/me');
                 const me = await myDeptRes.json();
                 const myDeptData = data.filter(d => d.dept_id === me.dept_id);
@@ -142,15 +173,13 @@
                     tbody.innerHTML = `<tr><td colspan="3">No summary data available.</td></tr>`;
                     return;
                 }
-
                 myDeptData.forEach(d => {
                     tbody.innerHTML += `
                     <tr>
                         <td>${d.department_name}</td>
                         <td>${d.total_employees}</td>
                         <td>${d.total_vehicles}</td>
-                    </tr>
-                `;
+                    </tr>`;
                 });
             } catch (e) {
                 console.error(e);
@@ -158,17 +187,27 @@
             }
         }
 
-        // --- Event Delegation (No Change) ---
+        // --- Event Delegation ---
         document.querySelector('#mgrComplaintsTable tbody').addEventListener('click', async function (e) {
             const row = e.target.closest('tr');
             if (!row) return;
 
             const complaintId = row.dataset.complaintId;
 
+            // --- MODIFIED RE-ASSIGN LOGIC ---
             if (e.target.classList.contains('reassign-btn')) {
                 const empId = row.querySelector('.emp-select').value;
-                if (!empId) return showMessage('Please select an employee.', 'error');
-                const payload = { emp_id: Number(empId) };
+                const vehId = row.querySelector('.veh-select').value; // <-- GET VEHICLE ID
+
+                if (!empId || !vehId) { // <-- VALIDATE BOTH
+                    return showMessage('Please select an employee AND a vehicle.', 'error');
+                }
+                
+                const payload = { 
+                    emp_id: Number(empId),
+                    vehicle_id: Number(vehId) // <-- ADD TO PAYLOAD
+                };
+
                 try {
                     const res = await fetch(`/api/complaints/${complaintId}/assign`, {
                         method: 'PUT',
@@ -178,7 +217,7 @@
                     const body = await res.json();
                     if (res.ok) {
                         showMessage('Re-assigned successfully!');
-                        loadPendingComplaints(); // Refresh
+                        loadComplaints(); // Refresh
                     } else {
                         showMessage(body.error || 'Re-assign failed', 'error');
                     }
@@ -186,6 +225,7 @@
                     showMessage('Network error', 'error');
                 }
             }
+            // --- END MODIFIED LOGIC ---
 
             if (e.target.classList.contains('close-btn')) {
                 if (!confirm('Are you sure you want to close this task? This is final.')) return;
@@ -198,7 +238,7 @@
                     const body = await res.json();
                     if (res.ok) {
                         showMessage('Task marked as Closed!');
-                        loadPendingComplaints(); // Refresh
+                        loadComplaints(); // Refresh
                     } else {
                         showMessage(body.error || 'Failed to close', 'error');
                     }
@@ -208,7 +248,7 @@
             }
         });
 
-        // --- Logout Button (No Change) ---
+        // --- Logout Button ---
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await fetch('/api/logout', { method: 'POST' });
             alert('You have been logged out.');
@@ -219,5 +259,4 @@
         checkLogin();
     </script>
 </body>
-
 </html>
