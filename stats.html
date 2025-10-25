@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WasteTrack - Stats</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-container">
+    <h2>Statistics</h2>
+
+    <div class="card">
+      <h3>Pending Complaints View</h3>
+      <div class="table-scroll-wrapper">
+        <table id="viewTable">
+          <thead><tr id="viewHead"></tr></thead>
+          <tbody id="viewBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadView(view='v_pending_complaints') {
+      try {
+        const res = await fetch('/api/views/' + view);
+        const data = await res.json();
+        const thead = document.getElementById('viewHead');
+        const tbody = document.getElementById('viewBody');
+        thead.innerHTML = ''; tbody.innerHTML = '';
+        if (!Array.isArray(data) || !data.length) {
+          tbody.innerHTML = '<tr><td>No data</td></tr>'; return;
+        }
+        Object.keys(data[0]).forEach(k => thead.innerHTML += `<th>${k}</th>`);
+        data.forEach(row => {
+          let r = '<tr>';
+          Object.values(row).forEach(v => r += `<td>${v}</td>`);
+          r += '</tr>';
+          tbody.innerHTML += r;
+        });
+      } catch(e) { console.error(e); }
+    }
+    loadView();
+  </script>
+</body>
+</html>

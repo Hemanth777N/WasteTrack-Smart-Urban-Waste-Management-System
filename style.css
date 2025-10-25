@@ -1,5 +1,4 @@
-
-        /* --- CSS Variables (Consistent Theme) --- */
+/* --- CSS Variables (Consistent Theme) --- */
         :root {
             --primary-green: #2ecc71;
             --primary-green-dark: #27ae60;
@@ -44,6 +43,7 @@
             width: 90%;
             max-width: 1100px;
             margin: 2rem auto;
+            padding: 0 0.5rem;
         }
 
         h2,
@@ -67,11 +67,11 @@
         /* --- Message Box (Replaces alert()) --- */
         #message-box {
             font-weight: 600;
-            padding: 1rem;
+            padding: 0.75rem 1rem;
             border-radius: 8px;
             text-align: center;
-            margin: 0 auto 1.5rem auto;
-            max-width: 600px;
+            margin: 0 auto 1rem auto;
+            max-width: 700px;
             display: none; /* Hidden by default */
         }
 
@@ -97,14 +97,14 @@
 
         form#complaintForm label {
             display: block;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1rem;
             font-weight: 600;
-            font-size: 0.9rem;
             color: var(--text-dark);
         }
 
         form#complaintForm input[type="text"],
-        form#complaintForm textarea {
+        form#complaintForm textarea,
+        form#complaintForm select {
             width: 100%;
             padding: 0.75rem 1rem;
             margin-top: 0.5rem;
@@ -113,7 +113,7 @@
             font-family: 'Poppins', sans-serif;
             font-size: 1rem;
             color: var(--text-dark);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: #fff;
         }
 
         form#complaintForm input[type="text"]:focus,
@@ -161,6 +161,7 @@
             border-radius: 12px;
             box-shadow: 0 10px 30px var(--shadow-color);
             overflow: hidden; /* Clips table corners */
+            margin-top: 1rem;
         }
         
         /* This wrapper makes the table scrollable on mobile */
@@ -217,7 +218,7 @@
             font-weight: 600;
             color: #fff;
             text-transform: capitalize;
-            min-width: 80px;
+            min-width: 70px;
             text-align: center;
         }
 
@@ -229,15 +230,15 @@
         /* --- Loading Spinner --- */
         .loader-container {
             text-align: center;
-            padding: 3rem;
+            padding: 1.25rem;
         }
 
         .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-green);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-green);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
             display: inline-block;
         }
@@ -247,14 +248,35 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* --- Manager / Employee small card & form styles --- */
+        .card {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 8px 24px var(--shadow-color);
+            margin-bottom: 1rem;
+        }
+
+        .assign-form {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .assign-form select,
+        .assign-form button {
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+        }
+
         /* --- Responsive Adjustments --- */
         @media (max-width: 700px) {
             body {
                 padding: 0.5rem;
             }
             .page-container {
-                width: 100%;
-                margin: 1rem auto;
+                width: 98%;
+                margin: 0.75rem auto;
             }
 
             form#complaintForm {
@@ -267,5 +289,10 @@
             table#complaintsTable th,
             table#complaintsTable td {
                 padding: 0.75rem 1rem;
+            }
+
+            .assign-form {
+                flex-direction: column;
+                align-items: stretch;
             }
         }

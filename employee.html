@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WasteTrack - Employee</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-container">
+    <h2>Employee Dashboard</h2>
+
+    <div class="card">
+      <h3>Your Assigned Tasks (recent)</h3>
+      <div class="table-scroll-wrapper">
+        <table id="empTasksTable">
+          <thead><tr><th>ID</th><th>Route</th><th>Description</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Record Waste Collected</h3>
+      <form id="wasteForm">
+        <label>Route ID: <input type="text" name="route_id" required></label>
+        <label>Type: <input type="text" name="waste_type"></label>
+        <label>Weight (kg): <input type="number" step="0.01" name="weight_kg" required></label>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function loadTasks() {
+      // For demo: load complaints assigned to anyone (ideally filter by emp)
+      try {
+        const res = await fetch('/api/complaints');
+        const data = await res.json();
+        const tb = document.querySelector('#empTasksTable tbody');
+        tb.innerHTML = '';
+        data.filter(c=>c.assigned_emp).forEach(c=>{
+          tb.innerHTML += `<tr><td>${c.complaint_id}</td><td>${c.route_name||''}</td><td>${c.description}</td><td>${c.status}</td></tr>`;
+        });
+      } catch(e) { console.error(e); }
+    }
+
+    document.getElementById('wasteForm').addEventListener('submit', async function(e){
+      e.preventDefault();
+      const f = e.target;
+      const payload = {
+        route_id: Number(f.route_id.value),
+        waste_type: f.waste_type.value,
+        weight_kg: Number(f.weight_kg.value)
+      };
+      try {
+        const resp = await fetch('/api/waste', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const body = await resp.json();
+        if (resp.ok) { alert('Waste recorded'); f.reset(); loadTasks(); }
+        else alert(body.error || 'Error');
+      } catch(err) { console.error(err); alert('Network error'); }
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>

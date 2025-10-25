@@ -8,84 +8,177 @@
 </head>
 
 <body>
-    <h2>Submit Waste Complaint</h2>
-    <form id="complaintForm">
-        <label>Name: <input type="text" name="citizen_name" required></label>
-        <label>Contact No: <input type="text" name="contact_no" required></label>
-        <label>Location: <input type="text" name="location" required></label>
-        <label>Description: <textarea name="description" required></textarea></label>
-        <button type="submit">Submit</button>
-    </form>
+    <div class="page-container">
+        <h2>Submit Waste Complaint</h2>
 
-    <h3>All Complaints</h3>
-    <table id="complaintsTable">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Location</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Complaints will be loaded here -->
-        </tbody>
-    </table>
+        <div id="message-box" role="status" aria-live="polite"></div>
+        <form id="complaintForm">
+            <label>Name:
+                <input type="text" name="citizen_name" required>
+            </label>
+            <label>Contact No:
+                <input type="text" name="contact_no" required>
+            </label>
+
+            <label>Department:
+                <select id="deptSelect" name="dept_id">
+                    <option value="">-- Select Department (optional) --</option>
+                </select>
+            </label>
+
+            <label>Route / Location:
+                <select id="routeSelect" name="route_id">
+                    <option value="">-- Select Route (optional) --</option>
+                </select>
+            </label>
+
+            <label>Description:
+                <textarea name="description" required></textarea>
+            </label>
+
+            <button type="submit">Submit</button>
+        </form>
+
+        <h3>All Complaints</h3>
+
+        <div class="table-container">
+            <div class="table-scroll-wrapper">
+                <table id="complaintsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Location</th>
+                            <th>Route</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Complaints loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <script>
+        const msgBox = document.getElementById('message-box');
+
+        function showMessage(text, type = 'success', timeout = 3000) {
+            msgBox.className = '';
+            msgBox.style.display = 'block';
+            msgBox.textContent = text;
+            msgBox.classList.add(type === 'error' ? 'message-error' : 'message-success');
+            if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
+        }
+
+        async function loadDepartments() {
+            try {
+                const res = await fetch('/api/departments');
+                const data = await res.json();
+                const sel = document.getElementById('deptSelect');
+                data.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.dept_id;
+                    opt.textContent = d.name + (d.location ? ' — ' + d.location : '');
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load departments', e);
+            }
+        }
+
+        async function loadRoutes(deptId) {
+            try {
+                const url = deptId ? `/api/routes/${deptId}` : '/api/routes';
+                const res = await fetch(url);
+                const data = await res.json();
+                const sel = document.getElementById('routeSelect');
+                sel.innerHTML = `<option value="">-- Select Route (optional) --</option>`;
+                if (Array.isArray(data)) {
+                    data.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.route_id;
+                        opt.textContent = r.route_name + (r.location ? ' — ' + r.location : '');
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load routes', e);
+            }
+        }
+
         async function loadComplaints() {
+            const tbody = document.querySelector('#complaintsTable tbody');
+            tbody.innerHTML = `<tr><td colspan="8" class="loader-container"><span class="loader"></span></td></tr>`;
             try {
                 const res = await fetch('/api/complaints');
                 const data = await res.json();
-                const tbody = document.querySelector('#complaintsTable tbody');
                 tbody.innerHTML = '';
                 if (Array.isArray(data)) {
                     data.forEach(c => {
+                        const date = c.complaint_date ? c.complaint_date.substring(0, 10) : '';
                         tbody.innerHTML += `<tr>
                             <td>${c.complaint_id}</td>
                             <td>${c.citizen_name}</td>
                             <td>${c.contact_no}</td>
                             <td>${c.location}</td>
+                            <td>${c.route_name || ''}</td>
                             <td>${c.description}</td>
-                            <td>${c.status}</td>
-                            <td>${c.complaint_date ? c.complaint_date.substring(0, 10) : ''}</td>
+                            <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g,'-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+                            <td>${date}</td>
                         </tr>`;
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="7" style="color:red;">Error loading complaints</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" style="color:red;">Error loading complaints</td></tr>`;
                 }
             } catch (e) {
-                const tbody = document.querySelector('#complaintsTable tbody');
-                tbody.innerHTML = `<tr><td colspan="7" style="color:red;">Error loading complaints: ${e}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="color:red;">Error loading complaints</td></tr>`;
+                console.error(e);
             }
         }
+
+        document.getElementById('deptSelect').addEventListener('change', (e) => {
+            const deptId = e.target.value;
+            loadRoutes(deptId);
+        });
 
         document.getElementById('complaintForm').addEventListener('submit', async function (e) {
             e.preventDefault();
             const form = e.target;
-            const data = {
+            const payload = {
                 citizen_name: form.citizen_name.value,
                 contact_no: form.contact_no.value,
                 location: form.location.value,
-                description: form.description.value
+                description: form.description.value,
+                route_id: form.route_id && form.route_id.value ? Number(form.route_id.value) : null
             };
-            const res = await fetch('/api/complaints', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (res.ok) {
-                alert('Complaint submitted successfully!');
-                form.reset();
-                loadComplaints();
-            } else {
-                alert('Error submitting complaint.');
+            try {
+                const res = await fetch('/api/complaints', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const body = await res.json();
+                if (res.ok) {
+                    showMessage('Complaint submitted successfully (ID: ' + body.complaint_id + ')');
+                    form.reset();
+                    loadComplaints();
+                } else {
+                    showMessage(body.error || 'Error submitting complaint', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showMessage('Network or server error', 'error');
             }
         });
 
+        // Initial loads
+        loadDepartments();
+        loadRoutes();
         loadComplaints();
     </script>
 </body>

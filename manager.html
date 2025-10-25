@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WasteTrack - Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-container">
+    <h2>Manager Dashboard</h2>
+
+    <div id="mgr-message" class="message-success" style="display:none;"></div>
+
+    <div class="card">
+      <h3>All Complaints</h3>
+      <div class="table-scroll-wrapper">
+        <table id="mgrComplaintsTable">
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Route</th><th>Description</th><th>Status</th><th>Assign</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadComplaints() {
+      const tbody = document.querySelector('#mgrComplaintsTable tbody');
+      tbody.innerHTML = '<tr><td colspan="6" class="loader-container"><span class="loader"></span></td></tr>';
+      try {
+        const res = await fetch('/api/complaints');
+        const data = await res.json();
+        tbody.innerHTML = '';
+        data.forEach(c => {
+          tbody.innerHTML += `<tr>
+            <td>${c.complaint_id}</td>
+            <td>${c.citizen_name}</td>
+            <td>${c.route_name || ''}</td>
+            <td>${c.description}</td>
+            <td>${c.status}</td>
+            <td>
+              <div class="assign-form" data-complaint="${c.complaint_id}">
+                <select class="emp-select"><option value="">Employee</option></select>
+                <select class="veh-select"><option value="">Vehicle</option></select>
+                <button class="assign-btn">Assign</button>
+              </div>
+            </td>
+          </tr>`;
+        });
+        // populate selects
+        const empRes = await fetch('/api/employees');
+        const emps = await empRes.json();
+        const vehRes = await fetch('/api/vehicles');
+        const vehs = await vehRes.json();
+        document.querySelectorAll('.assign-form').forEach(form => {
+          const empSel = form.querySelector('.emp-select');
+          const vehSel = form.querySelector('.veh-select');
+          emps.forEach(e => empSel.appendChild(new Option(e.name, e.emp_id)));
+          vehs.forEach(v => vehSel.appendChild(new Option(v.vehicle_no, v.vehicle_id)));
+          form.querySelector('.assign-btn').addEventListener('click', async () => {
+            const complaintId = form.dataset.complaint;
+            const empId = empSel.value;
+            const vehId = vehSel.value;
+            if (!empId || !vehId) return alert('Select employee and vehicle');
+            const payload = { emp_id: Number(empId), vehicle_id: Number(vehId), complaint_id: Number(complaintId) };
+            const resp = await fetch('/api/assign', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const body = await resp.json();
+            if (resp.ok) {
+              document.getElementById('mgr-message').textContent = 'Assigned successfully'; document.getElementById('mgr-message').style.display='block';
+              loadComplaints();
+            } else {
+              alert(body.error || 'Assign failed');
+            }
+          });
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    loadComplaints();
+  </script>
+</body>
+</html>
