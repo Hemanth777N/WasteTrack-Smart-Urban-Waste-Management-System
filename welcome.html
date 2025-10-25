@@ -22,9 +22,11 @@
     --border-light: #dddddd;
     --shadow-color: rgba(0, 0, 0, 0.1);
     
-    /* --- NEW COLOR FOR STAFF BUTTON --- */
+    /* --- Colors for Staff & Stats Buttons --- */
     --staff-gray: #778ca3; 
     --staff-gray-dark: #5a6b80;
+    --stats-blue: #3498db;
+    --stats-blue-dark: #2980b9;
 }
 
 /* --- Global Reset & Body Styling --- */
@@ -109,7 +111,7 @@ p {
     color: #ffffff;
 }
 
-/* --- NEW: Style for the second button --- */
+/* --- Style for the Staff button --- */
 .btn.staff-login {
     background-color: var(--staff-gray);
     box-shadow: 0 4px 15px rgba(119, 140, 163, 0.2);
@@ -119,6 +121,18 @@ p {
 .btn.staff-login:focus {
      background-color: var(--staff-gray-dark);
      box-shadow: 0 6px 20px rgba(119, 140, 163, 0.3);
+}
+
+/* --- NEW: Style for the Stats button --- */
+.btn.stats-link {
+    background-color: var(--stats-blue);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
+}
+
+.btn.stats-link:hover,
+.btn.stats-link:focus {
+     background-color: var(--stats-blue-dark);
+     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
 }
 
 
@@ -148,6 +162,7 @@ p {
         <div class="welcome-buttons">
             <a href="complaint.html" class="btn">Submit Complaint</a>
             <a href="auth.html" class="btn staff-login">Staff Login</a>
+            <a href="stats.html" class="btn stats-link">View Public Stats</a>
         </div>
     </div>
 </body>
