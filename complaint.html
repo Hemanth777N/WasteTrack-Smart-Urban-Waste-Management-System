@@ -1,17 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WasteTrack - Submit Complaint</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* --- New Filter Bar --- */
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 1rem 1.5rem;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+        }
+        .filter-bar label {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        .filter-bar select,
+        .filter-bar input[type="date"],
+        .filter-bar button {
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            font-size: 0.9rem;
+            font-family: 'Poppins', sans-serif;
+        }
+        .filter-bar button {
+            background-color: var(--primary-green);
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        .filter-bar button.clear {
+            background-color: var(--staff-gray, #778ca3);
+        }
+    </style>
 </head>
-
 <body>
     <div class="page-container">
         <h2>Submit Waste Complaint</h2>
 
         <div id="message-box" role="status" aria-live="polite"></div>
+        
+        <!-- Complaint Form (no changes) -->
         <form id="complaintForm">
             <label>Name:
                 <input type="text" name="citizen_name" required>
@@ -19,32 +56,46 @@
             <label>Contact No:
                 <input type="text" name="contact_no" required>
             </label>
-
             <label>Location (e.g., Cross Street, Landmark):
                 <input type="text" name="location">
             </label>
-            
             <label>Department:
-                <select id="deptSelect" name="dept_id">
-                    <option value="">-- Select Department (optional) --</option>
+                <select id="deptSelect" name="dept_id" required>
+                    <option value="">-- Select Department --</option>
                 </select>
             </label>
-
             <label>Route / Location:
                 <select id="routeSelect" name="route_id">
                     <option value="">-- Select Route (optional) --</option>
                 </select>
             </label>
-
             <label>Description:
                 <textarea name="description" required></textarea>
             </label>
-
             <button type="submit">Submit</button>
         </form>
 
         <h3>All Complaints</h3>
 
+        <!-- NEW FILTER BAR -->
+        <div class="filter-bar">
+            <label for="filter-status">Status:</label>
+            <select id="filter-status">
+                <option value="">All</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+            </select>
+
+            <label for="filter-date">Date:</label>
+            <input type="date" id="filter-date">
+
+            <button id="apply-filters">Apply Filters</button>
+            <button id="clear-filters" class="clear">Clear</button>
+        </div>
+
+        <!-- Complaints Table -->
         <div class="table-container">
             <div class="table-scroll-wrapper">
                 <table id="complaintsTable">
@@ -79,6 +130,7 @@
             if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
         }
 
+        // --- Department & Route Dropdowns (No Change) ---
         async function loadDepartments() {
             try {
                 const res = await fetch('/api/departments');
@@ -94,14 +146,13 @@
                 console.error('Failed to load departments', e);
             }
         }
-
         async function loadRoutes(deptId) {
+            const sel = document.getElementById('routeSelect');
+            sel.innerHTML = `<option value="">-- Select Route (optional) --</option>`;
+            if (!deptId) return; // Don't load all routes if no dept is selected
             try {
-                const url = deptId ? `/api/routes/${deptId}` : '/api/routes';
-                const res = await fetch(url);
+                const res = await fetch(`/api/routes/${deptId}`);
                 const data = await res.json();
-                const sel = document.getElementById('routeSelect');
-                sel.innerHTML = `<option value="">-- Select Route (optional) --</option>`;
                 if (Array.isArray(data)) {
                     data.forEach(r => {
                         const opt = document.createElement('option');
@@ -114,17 +165,32 @@
                 console.error('Failed to load routes', e);
             }
         }
+        document.getElementById('deptSelect').addEventListener('change', (e) => {
+            loadRoutes(e.target.value);
+        });
 
+        // --- UPDATED: Load Complaints with Filters ---
         async function loadComplaints() {
             const tbody = document.querySelector('#complaintsTable tbody');
             tbody.innerHTML = `<tr><td colspan="8" class="loader-container"><span class="loader"></span></td></tr>`;
+            
+            // Get filter values
+            const status = document.getElementById('filter-status').value;
+            const date = document.getElementById('filter-date').value;
+            
+            // Build query string
+            const q = new URLSearchParams();
+            if (status) q.append('status', status);
+            if (date) q.append('date', date);
+            
             try {
-                const res = await fetch('/api/complaints');
+                // Use the filter endpoint
+                const res = await fetch('/api/filter/complaints?' + q.toString());
                 const data = await res.json();
                 tbody.innerHTML = '';
-                if (Array.isArray(data)) {
+                if (Array.isArray(data) && data.length > 0) {
                     data.forEach(c => {
-                        const date = c.complaint_date ? c.complaint_date.substring(0, 10) : '';
+                        const complaintDate = c.complaint_date ? c.complaint_date.substring(0, 10) : '';
                         tbody.innerHTML += `<tr>
                             <td>${c.complaint_id}</td>
                             <td>${c.citizen_name}</td>
@@ -133,11 +199,11 @@
                             <td>${c.route_name || ''}</td>
                             <td>${c.description}</td>
                             <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g,'-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
-                            <td>${date}</td>
+                            <td>${complaintDate}</td>
                         </tr>`;
                     });
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="8" style="color:red;">Error loading complaints</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8">No complaints found.</td></tr>`;
                 }
             } catch (e) {
                 tbody.innerHTML = `<tr><td colspan="8" style="color:red;">Error loading complaints</td></tr>`;
@@ -145,21 +211,34 @@
             }
         }
 
-        document.getElementById('deptSelect').addEventListener('change', (e) => {
-            const deptId = e.target.value;
-            loadRoutes(deptId);
+        // --- NEW: Filter Button Event Listeners ---
+        document.getElementById('apply-filters').addEventListener('click', loadComplaints);
+        document.getElementById('clear-filters').addEventListener('click', () => {
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-date').value = '';
+            loadComplaints();
         });
 
+
+        // --- Complaint Form Submit (No Change) ---
         document.getElementById('complaintForm').addEventListener('submit', async function (e) {
             e.preventDefault();
             const form = e.target;
+            
+            // Check for required fields
+            const deptId = form.dept_id && form.dept_id.value ? Number(form.dept_id.value) : null;
+            if (!deptId) {
+                showMessage('Please select a department.', 'error');
+                return;
+            }
+
             const payload = {
                 citizen_name: form.citizen_name.value,
                 contact_no: form.contact_no.value,
-                location: form.location.value, // You might want to remove this if route_id is enough
+                location: form.location.value,
                 description: form.description.value,
                 route_id: form.route_id && form.route_id.value ? Number(form.route_id.value) : null,
-                dept_id: form.dept_id && form.dept_id.value ? Number(form.dept_id.value) : null // <-- ADD THIS LINE
+                dept_id: deptId
             };
             try {
                 const res = await fetch('/api/complaints', {
@@ -171,7 +250,8 @@
                 if (res.ok) {
                     showMessage('Complaint submitted successfully (ID: ' + body.complaint_id + ')');
                     form.reset();
-                    loadComplaints();
+                    loadRoutes(null); // Reset routes dropdown
+                    loadComplaints(); // Refresh the table
                 } else {
                     showMessage(body.error || 'Error submitting complaint', 'error');
                 }
@@ -183,9 +263,8 @@
 
         // Initial loads
         loadDepartments();
-        loadRoutes();
-        loadComplaints();
+        loadRoutes(null); // Load routes (which will be empty initially)
+        loadComplaints(); // Load complaints with default (no) filters
     </script>
 </body>
-
 </html>

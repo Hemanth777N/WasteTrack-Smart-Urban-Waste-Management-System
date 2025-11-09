@@ -3,57 +3,171 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WasteTrack - Manager</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .layout {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            /* Allow wrapping on small screens */
+        }
+
+        .filters {
+            flex: 1 1 260px;
+            /* Grow, shrink, base width 260px */
+            min-width: 260px;
+        }
+
+        .filters label {
+            display: block;
+            font-weight: 600;
+            margin-top: 1rem;
+            color: var(--text-dark);
+        }
+
+        .filters select,
+        .filters button {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            background: #fff;
+        }
+
+        .filters button {
+            background-color: var(--primary-green);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .filters button:hover {
+            background-color: var(--primary-green-dark);
+        }
+
+        .filters button#clearFilters {
+            background-color: var(--staff-gray, #778ca3);
+            margin-top: 0.5rem;
+        }
+
+        .filters button#clearFilters:hover {
+            background-color: var(--staff-gray-dark, #5a6b80);
+        }
+
+        main {
+            flex: 3 1 600px;
+        }
+
+        /* Grow 3x, base width 600px */
+
+        /* Make assign form more compact */
+        .assign-form select {
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .assign-form button {
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .assign-form .close-btn {
+            background-color: var(--status-unknown, #95a5a6);
+            color: white;
+            border: none;
+        }
+
+        .assign-form .close-btn:disabled {
+            background-color: #eee;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 
 <body>
     <div class="page-container">
         <h2>Manager Dashboard <span id="mgrName"></span></h2>
         <button id="logoutBtn" style="padding: 0.5rem 1rem; cursor: pointer; margin-bottom: 1rem;">Logout</button>
-
         <div id="mgr-message" style="display:none;"></div>
 
-        <div class="card">
-            <h3>Department Complaints</h3>
-            <div class="table-scroll-wrapper">
-                <table id="mgrComplaintsTable">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Route</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Re-assign</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        </tbody>
-                </table>
-            </div>
-        </div>
+        <div class="layout">
+            <!-- NEW FILTER SIDEBAR -->
+            <aside class="filters card">
+                <h4>Filters</h4>
+                <label>Department</label>
+                <select id="filter-dept" disabled>
+                    <option value="">Loading...</option>
+                </select>
+                <label>Route</label>
+                <select id="filter-route">
+                    <option value="">All Routes</option>
+                </select>
+                <label>Status</label>
+                <select id="filter-status">
+                    <option value="">All Statuses</option>
+                    <option value="Open">Open</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Closed">Closed</option>
+                </select>
+                <button id="applyFilters" style="margin-top: 1.5rem;">Apply</button>
+                <button id="clearFilters">Clear</button>
+            </aside>
 
-        <div class="card">
-            <h3>Your Department Summary (v_department_summary)</h3>
-            <div class="table-scroll-wrapper">
-                <table id="deptSummaryTable">
-                    <thead>
-                        <tr>
-                            <th>Department</th>
-                            <th>Total Employees</th>
-                            <th>Total Vehicles</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+            <!-- MAIN CONTENT AREA -->
+            <main>
+                <div class="card">
+                    <h3>Department Complaints</h3>
+                    <div class="table-scroll-wrapper">
+                        <table id="mgrComplaintsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Route</th>
+                                    <th>Status</th>
+                                    <th>Assignee</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Your Department Summary</h3>
+                    <div class="table-scroll-wrapper">
+                        <table id="deptSummaryTable">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Total Employees</th>
+                                    <th>Total Vehicles</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
     <script>
         const msgBox = document.getElementById('mgr-message');
+        let allEmployees = [];
+        let allVehicles = [];
+        let currentUser = {};
 
         function showMessage(text, type = 'success', timeout = 3000) {
             msgBox.className = '';
@@ -67,27 +181,28 @@
             try {
                 const res = await fetch('/api/me');
                 if (!res.ok) throw new Error('Not logged in');
-                const body = await res.json();
-                
-                if (body.role !== 'Manager') {
-                  window.location.href = '/auth.html';
-                  return;
+                currentUser = await res.json();
+
+                if (currentUser.role !== 'Manager') {
+                    window.location.href = '/auth.html';
+                    return;
                 }
-                document.getElementById('mgrName').textContent = `(${body.name})`;
-                
-                // Load all data
-                await loadDropdownData(); // <-- Wait for this first
-                loadComplaints(); 
-                loadDepartmentSummary(); 
+                document.getElementById('mgrName').textContent = `(${currentUser.name})`;
+
+                // Load all data in parallel
+                await Promise.all([
+                    loadDropdownData(),
+                    loadDepartmentSummary(),
+                    loadDeptsFilter()
+                ]);
+
+                // Load table last
+                applyFilters();
             } catch (e) {
                 console.error(e);
                 window.location.href = '/auth.html';
             }
         }
-
-        // --- Store dropdown data globally ---
-        let allEmployees = [];
-        let allVehicles = [];
 
         async function loadDropdownData() {
             try {
@@ -98,64 +213,100 @@
                 ]);
                 allEmployees = await empRes.json();
                 allVehicles = await vehRes.json();
-            } catch (e) {
-                console.error('Failed to load dropdown data', e);
-            }
+            } catch (e) { console.error('Failed to load dropdown data', e); }
         }
-        
-        // --- Load Complaints (Main Table) ---
-        async function loadComplaints() {
-            const tbody = document.querySelector('#mgrComplaintsTable tbody');
-            if (!tbody) return; 
-            tbody.innerHTML = '<tr><td colspan="7" class="loader-container"><span class="loader"></span></td></tr>';
-            try {
-                const res = await fetch('/api/complaints');
-                const data = await res.json();
-                tbody.innerHTML = '';
 
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7">No complaints found for this department.</td></tr>';
+        // --- NEW FILTER FUNCTIONS ---
+        async function loadDeptsFilter() {
+            try {
+                const depts = await fetch('/api/departments').then(r => r.json());
+                const sel = document.getElementById('filter-dept');
+                // Only show manager's own department in filter
+                const myDept = depts.find(d => d.dept_id === currentUser.dept_id);
+                if (myDept) {
+                    const o = document.createElement('option'); o.value = myDept.dept_id; o.text = myDept.name;
+                    sel.innerHTML = ''; // Clear "Loading..."
+                    sel.appendChild(o);
+                    sel.disabled = true; // Keep it locked to their department
+                }
+                // Load routes for this dept
+                await loadRoutesForDept(currentUser.dept_id);
+            } catch (e) { console.error('Failed to load dept filter', e); }
+        }
+
+        async function loadRoutesForDept(deptId) {
+            const sel = document.getElementById('filter-route');
+            sel.innerHTML = '<option value="">All Routes</option>';
+            if (!deptId) return;
+            try {
+                const routes = await fetch(`/api/routes/${deptId}`).then(r => r.json());
+                routes.forEach(r => {
+                    const o = document.createElement('option'); o.value = r.route_id; o.text = r.route_name; sel.appendChild(o);
+                });
+            } catch (e) { console.error('Failed to load routes', e); }
+        }
+
+        // This is the main data loading function now
+        async function applyFilters() {
+            const dept = document.getElementById('filter-dept').value || currentUser.dept_id; // Default to user's dept
+            const route = document.getElementById('filter-route').value;
+            const status = document.getElementById('filter-status').value;
+
+            const q = new URLSearchParams();
+            if (dept) q.append('dept_id', dept);
+            if (route) q.append('route_id', route);
+            if (status) q.append('status', status);
+
+            const tbody = document.querySelector('#mgrComplaintsTable tbody');
+            tbody.innerHTML = '<tr><td colspan="6" class="loader-container"><span class="loader"></span></td></tr>';
+
+            try {
+                // Use the new filter endpoint
+                const rows = await fetch('/api/filter/complaints?' + q.toString()).then(r => r.json());
+
+                tbody.innerHTML = '';
+                if (rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No complaints found matching filters.</td></tr>';
                     return;
                 }
 
-                // --- MODIFIED SECTION ---
-                data.forEach(c => {
-                    // Generate dropdown options
+                rows.forEach(c => {
                     const empOptions = allEmployees.map(e => `<option value="${e.emp_id}" ${e.emp_id === c.assigned_emp ? 'selected' : ''}>${e.name}</option>`).join('');
                     const vehOptions = allVehicles.map(v => `<option value="${v.vehicle_id}">${v.vehicle_no}</option>`).join('');
-
                     const isResolved = c.status === 'Resolved';
                     const isClosed = c.status === 'Closed';
 
                     tbody.innerHTML += `
-                    <tr data-complaint-id="${c.complaint_id}" data-route-id="${c.route_id || ''}">
-                      <td>${c.complaint_id}</td>
-                      <td>${c.citizen_name}</td>
-                      <td>${c.route_name || 'N/A'}</td>
-                      <td>${c.description}</td>
-                      <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g, '-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
-                      <td>
-                        <div class="assign-form">
-                          <select class="emp-select" title="Assign Employee">${empOptions}</select>
-                          <select class="veh-select" title="Assign Vehicle">${vehOptions}</select>
-                          <button class="reassign-btn" ${isClosed ? 'disabled' : ''}>Re-assign</button>
-                        </div>
-                      </td>
-                      <td>
-                        <button class="close-btn" ${isResolved ? '' : 'disabled'}>
-                          Mark Closed
-                        </button>
-                      </td>
+                    <tr data-complaint-id="${c.complaint_id}">
+                        <td>${c.complaint_id}</td>
+                        <td>${c.citizen_name}</td>
+                        <td>${c.route_name || c.location || 'N/A'}</td>
+                        <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g, '-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+                        <td>${c.assigned_employee || 'Unassigned'}</td>
+                        <td>
+                            <div class="assign-form">
+                                <select class="emp-select" title="Assign Employee">${empOptions}</select>
+                                <select class="veh-select" title="Assign Vehicle">${vehOptions}</select>
+                                <button class="reassign-btn" ${isClosed ? 'disabled' : ''}>Re-assign</button>
+                                <button class="close-btn" ${isResolved ? '' : 'disabled'}>Close</button>
+                            </div>
+                        </td>
                     </tr>`;
                 });
-                // --- END MODIFIED SECTION ---
             } catch (e) {
-                console.error(e);
-                tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error loading data.</td></tr>';
+                console.error('Failed to apply filters:', e);
+                tbody.innerHTML = '<tr><td colspan="6" style="color:red;">Error loading complaints.</td></tr>';
             }
         }
 
-        // --- Load Department Summary (View Table) ---
+        document.getElementById('applyFilters').onclick = applyFilters;
+        document.getElementById('clearFilters').onclick = () => {
+            document.getElementById('filter-route').value = '';
+            document.getElementById('filter-status').value = '';
+            applyFilters();
+        };
+        // --- END FILTER FUNCTIONS ---
+
         async function loadDepartmentSummary() {
             const table = document.getElementById('deptSummaryTable');
             const tbody = table.querySelector('tbody');
@@ -165,10 +316,7 @@
                 const data = await res.json();
                 tbody.innerHTML = '';
 
-                const myDeptRes = await fetch('/api/me');
-                const me = await myDeptRes.json();
-                const myDeptData = data.filter(d => d.dept_id === me.dept_id);
-
+                const myDeptData = data.filter(d => d.dept_id === currentUser.dept_id);
                 if (myDeptData.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="3">No summary data available.</td></tr>`;
                     return;
@@ -187,27 +335,16 @@
             }
         }
 
-        // --- Event Delegation ---
         document.querySelector('#mgrComplaintsTable tbody').addEventListener('click', async function (e) {
             const row = e.target.closest('tr');
             if (!row) return;
-
             const complaintId = row.dataset.complaintId;
 
-            // --- MODIFIED RE-ASSIGN LOGIC ---
             if (e.target.classList.contains('reassign-btn')) {
                 const empId = row.querySelector('.emp-select').value;
-                const vehId = row.querySelector('.veh-select').value; // <-- GET VEHICLE ID
-
-                if (!empId || !vehId) { // <-- VALIDATE BOTH
-                    return showMessage('Please select an employee AND a vehicle.', 'error');
-                }
-                
-                const payload = { 
-                    emp_id: Number(empId),
-                    vehicle_id: Number(vehId) // <-- ADD TO PAYLOAD
-                };
-
+                const vehId = row.querySelector('.veh-select').value;
+                if (!empId || !vehId) return showMessage('Please select an employee AND a vehicle.', 'error');
+                const payload = { emp_id: Number(empId), vehicle_id: Number(vehId) };
                 try {
                     const res = await fetch(`/api/complaints/${complaintId}/assign`, {
                         method: 'PUT',
@@ -217,18 +354,15 @@
                     const body = await res.json();
                     if (res.ok) {
                         showMessage('Re-assigned successfully!');
-                        loadComplaints(); // Refresh
+                        applyFilters(); // Refresh table
                     } else {
                         showMessage(body.error || 'Re-assign failed', 'error');
                     }
-                } catch (err) {
-                    showMessage('Network error', 'error');
-                }
+                } catch (err) { showMessage('Network error', 'error'); }
             }
-            // --- END MODIFIED LOGIC ---
 
             if (e.target.classList.contains('close-btn')) {
-                if (!confirm('Are you sure you want to close this task? This is final.')) return;
+                if (!confirm('Are you sure you want to close this task?')) return;
                 try {
                     const res = await fetch(`/api/complaints/${complaintId}/status`, {
                         method: 'PUT',
@@ -238,25 +372,22 @@
                     const body = await res.json();
                     if (res.ok) {
                         showMessage('Task marked as Closed!');
-                        loadComplaints(); // Refresh
+                        applyFilters(); // Refresh table
                     } else {
                         showMessage(body.error || 'Failed to close', 'error');
                     }
-                } catch (err) {
-                    showMessage('Network error', 'error');
-                }
+                } catch (err) { showMessage('Network error', 'error'); }
             }
         });
 
-        // --- Logout Button ---
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             await fetch('/api/logout', { method: 'POST' });
             alert('You have been logged out.');
             window.location.href = '/welcome.html';
         });
 
-        // --- Initial Load ---
         checkLogin();
     </script>
 </body>
+
 </html>

@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WasteTrack - Employee</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <div class="page-container">
     <h2>Employee Dashboard <span id="empName"></span></h2>
@@ -13,13 +16,14 @@
     <div id="message-box" role="status" aria-live="polite" style="display:none;"></div>
 
     <div class="card">
-      <h3>Your Assigned Tasks</h3>
+      <h3>Your Assigned Tasks (from v_employee_tasks)</h3>
       <div class="table-scroll-wrapper">
         <table id="empTasksTable">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Complaint ID</th>
               <th>Route</th>
+              <th>Vehicle</th>
               <th>Description</th>
               <th>Status</th>
               <th>Action</th>
@@ -32,19 +36,28 @@
 
     <div class="card">
       <h3>Record Waste Collected</h3>
-      <form id="wasteForm">
-        <label>Route ID: <input type="text" name="route_id" required></label>
-        <label>Type: <input type="text" name="waste_type"></label>
-        <label>Weight (kg): <input type="number" step="0.01" name="weight_kg" required></label>
-        <button type="submit">Submit</button>
+      <p style="font-size: 0.9rem; text-align: center; margin-bottom: 1rem;">Log waste after completing a task.</p>
+      <form id="wasteForm" style="max-width: 400px; margin: 0 auto;">
+        <label>Route ID:
+          <input type="number" name="route_id" required placeholder="Enter Route ID">
+        </label>
+        <label>Waste Type:
+          <input type="text" name="waste_type" placeholder="e.g., Mixed, Recyclable">
+        </label>
+        <label>Weight (kg):
+          <input type="number" step="0.01" name="weight_kg" required placeholder="e.g., 250.5">
+        </label>
+        <button type="submit"
+          style="width: 100%; margin-top: 1rem; padding: 0.8rem; background-color: var(--primary-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Submit
+          Record</button>
       </form>
     </div>
   </div>
 
   <script>
     const msgBox = document.getElementById('message-box');
+    let currentUser = {};
 
-    // --- NEW: Message function ---
     function showMessage(text, type = 'success', timeout = 3000) {
       msgBox.className = '';
       msgBox.style.display = 'block';
@@ -53,54 +66,83 @@
       if (timeout) setTimeout(() => msgBox.style.display = 'none', timeout);
     }
 
-    // --- NEW: Login Check ---
     async function checkLogin() {
       try {
         const res = await fetch('/api/me');
-        const body = await res.json();
-        if (!res.ok || body.role !== 'Employee') {
+        if (!res.ok) throw new Error('Not logged in');
+        currentUser = await res.json();
+
+        if (currentUser.role !== 'Employee') {
           window.location.href = '/auth.html';
+          return;
         }
-        document.getElementById('empName').textContent = `(${body.name})`;
+        document.getElementById('empName').textContent = `(${currentUser.name})`;
+        loadTasks(); // Load tasks after login
       } catch (e) {
         window.location.href = '/auth.html';
       }
     }
 
-    // --- REVISED: Load Tasks ---
+    // --- REVISED: Load Tasks from the new view ---
     async function loadTasks() {
+      const tbody = document.querySelector('#empTasksTable tbody');
+      tbody.innerHTML = '<tr><td colspan="6" class="loader-container"><span class="loader"></span></td></tr>';
       try {
-        // The backend now filters this automatically based on our session
-        const res = await fetch('/api/complaints');
+        // Fetch all tasks from the view
+        const res = await fetch('/api/views/v_employee_tasks');
         const data = await res.json();
-        const tb = document.querySelector('#empTasksTable tbody');
-        tb.innerHTML = '';
-        if (data.length === 0) {
-          tb.innerHTML = '<tr><td colspan="5">No tasks assigned.</td></tr>';
+
+        // Filter tasks for the current logged-in employee (client-side)
+        const myTasks = data.filter(task => task.emp_id === currentUser.emp_id);
+
+        tbody.innerHTML = '';
+        if (myTasks.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6">No tasks assigned.</td></tr>';
           return;
         }
 
-        data.forEach(c => {
+        // Use a Set to avoid duplicate complaint entries if a task has multiple waste records
+        const uniqueComplaints = new Map();
+        myTasks.forEach(c => {
+          if (c.complaint_id) {
+            // Only show the latest status for a complaint
+            if (!uniqueComplaints.has(c.complaint_id) || c.status !== 'Resolved') {
+              uniqueComplaints.set(c.complaint_id, c);
+            }
+          }
+        });
+
+        if (uniqueComplaints.size === 0) {
+          tbody.innerHTML = '<tr><td colspan="6">No complaints assigned.</td></tr>';
+          return;
+        }
+
+        uniqueComplaints.forEach(c => {
           const isDone = c.status === 'Resolved' || c.status === 'Closed';
-          tb.innerHTML += `<tr>
-            <td>${c.complaint_id}</td>
-            <td>${c.route_name || ''}</td>
-            <td>${c.description}</td>
-            <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g,'-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
+          tbody.innerHTML += `<tr>
+            <td>${c.complaint_id || 'N/A'}</td>
+            <td>${c.route_name || 'N/A'}</td>
+            <td>${c.vehicle_no || 'N/A'}</td>
+            <td>${c.description || 'General Task'}</td>
+            <td><span class="status-badge ${c.status ? ('status-' + c.status.toLowerCase().replace(/\s+/g, '-')) : 'status-unknown'}">${c.status || 'unknown'}</span></td>
             <td>
-              <button class="resolve-btn" data-id="${c.complaint_id}" ${isDone ? 'disabled' : ''}>
+              <button class="resolve-btn" data-id="${c.complaint_id}" ${!c.complaint_id || isDone ? 'disabled' : ''}>
                 Mark Resolved
               </button>
             </td>
           </tr>`;
         });
-      } catch(e) { console.error(e); }
+      } catch (e) {
+        console.error('Failed to load tasks:', e);
+        tbody.innerHTML = '<tr><td colspan="6" style="color:red;">Error loading tasks.</td></tr>';
+      }
     }
 
-    // --- NEW: Handle Status Update ---
-    document.querySelector('#empTasksTable tbody').addEventListener('click', async function(e) {
+    // --- Handle Status Update (no change needed) ---
+    document.querySelector('#empTasksTable tbody').addEventListener('click', async function (e) {
       if (e.target.classList.contains('resolve-btn')) {
         const complaintId = e.target.dataset.id;
+        if (!complaintId) return;
         if (!confirm('Mark this task as resolved?')) return;
 
         try {
@@ -122,8 +164,9 @@
       }
     });
 
-    // --- UNCHANGED: Waste Form ---
-    document.getElementById('wasteForm').addEventListener('submit', async function(e){
+    // --- Waste Form (no change needed) ---
+    // Added some style to the form in HTML
+    document.getElementById('wasteForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       const f = e.target;
       const payload = {
@@ -132,17 +175,17 @@
         weight_kg: Number(f.weight_kg.value)
       };
       try {
-        const resp = await fetch('/api/waste', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const resp = await fetch('/api/waste', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const body = await resp.json();
-        if (resp.ok) { 
-          showMessage('Waste recorded'); 
+        if (resp.ok) {
+          showMessage('Waste recorded');
           f.reset();
         }
         else showMessage(body.error || 'Error', 'error');
-      } catch(err) { console.error(err); showMessage('Network error', 'error'); }
+      } catch (err) { console.error(err); showMessage('Network error', 'error'); }
     });
 
-    // --- NEW: Logout Button ---
+    // --- Logout Button (no change needed) ---
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await fetch('/api/logout', { method: 'POST' });
       alert('You have been logged out.');
@@ -151,7 +194,7 @@
 
     // --- Initial Load ---
     checkLogin();
-    loadTasks();
   </script>
 </body>
+
 </html>

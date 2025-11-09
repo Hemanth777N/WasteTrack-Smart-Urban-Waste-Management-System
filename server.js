@@ -10,6 +10,7 @@ const complaintRoutes = require("./routes/complaints");
 const dataRoutes = require("./routes/data");
 const wasteRoutes = require("./routes/waste");
 const viewRoutes = require("./routes/views");
+const filterRoutes = require('./routes/filter'); // <-- ADD THIS LINE
 
 const app = express();
 const PORT = 3000;
@@ -42,6 +43,7 @@ app.use("/api", complaintRoutes);
 app.use("/api", dataRoutes);
 app.use("/api", wasteRoutes);
 app.use("/api", viewRoutes);
+app.use('/api/filter', filterRoutes); // <-- ADD THIS LINE
 
 // Fallback for API
 app.use("/api", (req, res) =>
