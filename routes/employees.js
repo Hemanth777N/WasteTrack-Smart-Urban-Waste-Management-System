@@ -147,4 +147,29 @@ router.delete('/:id', checkAuth, async (req, res) => {
   }
 });
 
+// --- ADDED THIS BACK ---
+// GET /me (for checking login status on page load)
+router.get("/me", checkAuth, (req, res) => {
+  // checkAuth middleware already verified session
+  res.json({
+    emp_id: req.session.emp_id,
+    role: req.session.role,
+    dept_id: req.session.dept_id,
+    name: req.session.name
+  });
+});
+
+// --- ADDED THIS BACK ---
+// POST /logout
+router.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: "Could not log out" });
+    }
+    res.clearCookie("connect.sid"); // Clear the session cookie
+    res.json({ message: "Logout successful" });
+  });
+});
+
+
 module.exports = router;

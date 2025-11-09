@@ -1,169 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Welcome - WasteTrack</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* Welcome Css start */
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WasteTrack — Welcome</title>
 
-/* --- Import Google Font --- */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+  <!-- Google font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-/* --- CSS Variables (Your App's Theme) --- */
-:root {
-    --primary-green: #2ecc71;
-    --primary-green-dark: #27ae60;
-    --text-dark: #333333;
-    --text-light: #666666;
-    --bg-light: #ffffff;
-    --bg-gradient-start: #e0f7fa;
-    --bg-gradient-end: #f8f9fa;
-    --border-light: #dddddd;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-    
-    /* --- Colors for Staff & Stats Buttons --- */
-    --staff-gray: #778ca3; 
-    --staff-gray-dark: #5a6b80;
-    --stats-blue: #3498db;
-    --stats-blue-dark: #2980b9;
-}
+  <!-- App styles -->
+  <link rel="stylesheet" href="style.css">
 
-/* --- Global Reset & Body Styling --- */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
-    color: var(--text-dark);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-}
-
-/* --- Main Card Styling (for .container) --- */
-.container {
-    background: var(--bg-light);
-    padding: 2.5rem 3rem;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px var(--shadow-color);
-    text-align: center;
-    width: 90%;
-    max-width: 450px;
-    animation: fadeInSlideUp 0.8s ease-out forwards;
-    opacity: 0;
-}
-
-/* --- Typography --- */
-h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--primary-green);
-    margin-bottom: 0.75rem;
-}
-
-p {
-    font-size: 1rem;
-    color: var(--text-light);
-    margin-bottom: 2.5rem; /* Increased margin */
-}
-
-/* --- Button Styling (for .btn) --- */
-.btn {
-    display: block; /* Make buttons stack vertically */
-    width: 100%;
-    text-decoration: none;
-    font-family: 'Poppins', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-align: center;
-    background-color: var(--primary-green);
-    border: none;
-    border-radius: 8px;
-    padding: 0.8rem 2.5rem;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);
-    transition: all 0.3s ease;
-}
-
-/* --- NEW: Container for the buttons --- */
-.welcome-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem; /* Space between buttons */
-}
-
-
-.btn:hover,
-.btn:focus {
-    background-color: var(--primary-green-dark);
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
-    outline: none;
-    color: #ffffff;
-}
-
-/* --- Style for the Staff button --- */
-.btn.staff-login {
-    background-color: var(--staff-gray);
-    box-shadow: 0 4px 15px rgba(119, 140, 163, 0.2);
-}
-
-.btn.staff-login:hover,
-.btn.staff-login:focus {
-     background-color: var(--staff-gray-dark);
-     box-shadow: 0 6px 20px rgba(119, 140, 163, 0.3);
-}
-
-/* --- NEW: Style for the Stats button --- */
-.btn.stats-link {
-    background-color: var(--stats-blue);
-    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);
-}
-
-.btn.stats-link:hover,
-.btn.stats-link:focus {
-     background-color: var(--stats-blue-dark);
-     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
-}
-
-
-.btn:active {
-    transform: translateY(0);
-}
-
-
-/* --- Animation Keyframes --- */
-@keyframes fadeInSlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-    </style>
-    </head>
+  <meta name="description" content="WasteTrack — smart city waste management. Report complaints, manage routes, and analyze stats." />
+</head>
 <body>
-    <div class="container">
-        <h1>Welcome to WasteTrack</h1>
-        <p>Manage complaints or log in to your staff portal.</p>
-        
-        <div class="welcome-buttons">
-            <a href="complaint.html" class="btn">Submit Complaint</a>
-            <a href="auth.html" class="btn staff-login">Staff Login</a>
-            <a href="stats.html" class="btn stats-link">View Public Stats</a>
+  <header class="nav">
+    <div class="nav-inner">
+      <div class="brand">
+        <div class="logo">🌱</div>
+        <div class="brand-text">
+          <h1>WasteTrack</h1>
+          <small>City Waste Management Portal</small>
         </div>
+      </div>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="complaint.html">Report</a>
+        <a href="stats.html">Stats</a>
+        <a href="auth.html" class="btn small">Sign In / Sign Up</a>
+      </nav>
     </div>
+  </header>
+
+  <main class="hero" role="main" aria-labelledby="hero-title">
+    <div class="hero-overlay"></div>
+
+    <div class="hero-inner">
+      <div class="hero-left">
+        <h2 id="hero-title">Smart · Transparent · Sustainable</h2>
+        <p class="lead">Report waste issues, track progress, and help keep our city clean. WasteTrack connects citizens, drivers, and managers on one platform.</p>
+
+        <div class="cta-row">
+          <a class="btn large primary" href="complaint.html" aria-label="Report a new complaint">Report Issue</a>
+          <a class="btn large ghost" href="stats.html" aria-label="View public stats">View Stats</a>
+        </div>
+
+        <div class="quick-links">
+          <a href="auth.html?role=Employee">Employee login</a>
+          <a href="auth.html?role=Manager">Manager login</a>
+          <a href="auth.html?role=Head">Head login</a>
+        </div>
+      </div>
+
+      <aside class="hero-right" aria-hidden="false">
+        <div class="card glass">
+          <h3>Live Snapshot</h3>
+          <ul class="mini-metrics">
+            <li><strong id="metricPending">—</strong><small>Pending complaints</small></li>
+            <li><strong id="metricResolved">—</strong><small>Resolved</small></li>
+            <li><strong id="metricVehicles">—</strong><small>Active vehicles</small></li>
+          </ul>
+          <a class="btn small primary" href="stats.html">Open Analytics</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <section class="features" aria-label="Features">
+    <div class="container">
+      <article class="feature">
+        <h4>Report & Track</h4>
+        <p>Fast complaint form & progress tracking for citizens — know who’s assigned and when it’s closed.</p>
+      </article>
+
+      <article class="feature">
+        <h4>Role-based Dashboard</h4>
+        <p>Managers assign routes and monitor employees. Employees update statuses in real-time.</p>
+      </article>
+
+      <article class="feature">
+        <h4>Analytics</h4>
+        <p>Charts and views showing vehicle usage, collection stats, and department summaries.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>© <span id="year"></span> WasteTrack — Built for smarter cities.</p>
+      <small>Designed with accessibility and performance in mind.</small>
+    </div>
+  </footer>
+
+  <script>
+    // simple dynamic small metric fetch for hero card
+    (async function loadMetrics(){
+      try{
+        const res = await fetch('/api/stats/overview');
+        if(!res.ok) return;
+        const data = await res.json();
+        document.getElementById('metricPending').textContent = data.pending ?? '0';
+        document.getElementById('metricResolved').textContent = data.resolved ?? '0';
+        document.getElementById('metricVehicles').textContent = (data.vehicleUsage || []).length || '0';
+      }catch(e){
+        console.warn('metrics load failed', e);
+      }
+    })();
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
 </body>
 </html>
