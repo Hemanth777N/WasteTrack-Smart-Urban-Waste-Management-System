@@ -508,5 +508,5 @@ Query OK, 0 rows affected (0.1539 sec)
 Records: 0  Duplicates: 0  Warnings: 0
  MySQL  localhost:3306 ssl  waste_track  SQL >
 
-    
+
 ```

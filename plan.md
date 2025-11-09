@@ -626,6 +626,3 @@ Keep the interface **clean and modern**:
 * ✅ Visually appealing, functional, and aligned with your marks criteria.
 
 ---
-
-Would you like me to now generate the **SQL scripts (Views + Alter commands + Updated Employee and Complaints table)** to get your database ready for this plan?
-That would be your **Phase 1 start point.**

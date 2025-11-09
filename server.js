@@ -1,6 +1,8 @@
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+const fs = require('fs').promises; // <-- Import fs promises
+const pool = require('./db'); // <-- Import the pool
 
 // Import routes
 const authRoutes = require("./routes/auth");
@@ -46,6 +48,39 @@ app.use("/api", (req, res) =>
   res.status(404).json({ error: "API endpoint not found" })
 );
 
-app.listen(PORT, () => {
-  console.log(`Server running. Welcome page: http://localhost:${PORT}/`);
-});
+// --- NEW: Database Initialization Function ---
+async function initializeDatabase() {
+  try {
+    console.log('Attempting to initialize database...');
+    // Make sure your SQL file is named 'database_setup.sql' and in the root directory
+    const sqlFilePath = path.join(__dirname, 'database_setup.sql');
+    const sqlScript = await fs.readFile(sqlFilePath, 'utf-8');
+
+    // Execute the entire script
+    // Note: This relies on 'multipleStatements: true' in db.js
+    await pool.query(sqlScript);
+
+    console.log('Database setup script executed successfully.');
+  } catch (error) {
+    console.error('-----------------------------------------');
+    console.error('⛔️ ERROR EXECUTING DATABASE SETUP SCRIPT:');
+    console.error(error);
+    console.error('-----------------------------------------');
+    // Decide if you want the server to stop if DB setup fails
+    // process.exit(1);
+  }
+}
+
+// --- Start the server ---
+async function startServer() {
+  // Initialize DB first
+  await initializeDatabase();
+
+  // Then start listening
+  app.listen(PORT, () => {
+    console.log(`Server running. Welcome page: http://localhost:${PORT}/`);
+  });
+}
+
+// Run the start function
+startServer();
