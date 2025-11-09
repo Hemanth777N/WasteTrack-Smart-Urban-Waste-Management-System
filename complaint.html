@@ -225,7 +225,6 @@
             e.preventDefault();
             const form = e.target;
             
-            // Check for required fields
             const deptId = form.dept_id && form.dept_id.value ? Number(form.dept_id.value) : null;
             if (!deptId) {
                 showMessage('Please select a department.', 'error');
@@ -235,11 +234,17 @@
             const payload = {
                 citizen_name: form.citizen_name.value,
                 contact_no: form.contact_no.value,
-                location: form.location.value,
+                // location: form.location.value, // <-- THIS WAS THE BUG. REMOVED.
                 description: form.description.value,
                 route_id: form.route_id && form.route_id.value ? Number(form.route_id.value) : null,
                 dept_id: deptId
             };
+            
+            // Check if user manually typed a location
+            if (form.location && form.location.value) {
+                payload.location = form.location.value;
+            }
+
             try {
                 const res = await fetch('/api/complaints', {
                     method: 'POST',

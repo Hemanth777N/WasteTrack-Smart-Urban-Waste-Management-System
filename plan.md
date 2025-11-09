@@ -628,3 +628,595 @@ Keep the interface **clean and modern**:
 ---
 
 
+Absolutely — I can do all of that. Below I give you **ready-to-paste, complete code** for the changes you asked:
+
+* enhanced `auth.html` (sign-up + login forms that capture all employee fields, including department + role selection),
+* `auth.js` (client-side logic to submit register/login, client-side validation, redirect by role),
+* `head.html` (head’s dashboard: list employees, change role, delete employee),
+* backend `routes/employees.js` (Express endpoints: register, login, list employees, update role, delete employee; uses `bcrypt` and `mysql2/promise`),
+* small `server.js` snippets to mount the new router,
+* the SQL addition to support role `Head`.
+
+Everything is self-contained and annotated so you can copy into your repo and test. I keep security basic but improved (bcrypt password hashing). If you want session-based auth later I can extend to JWT or express-session.
+
+---
+
+## 1) DB change (run this first)
+
+Make sure `employee` table has `email`, `password`, `role` and `dept_id` (we used these earlier). Also add `'Head'` to allowed roles.
+
+```sql
+-- ensure role field includes Head
+ALTER TABLE employee
+  MODIFY COLUMN role ENUM('Employee','Manager','Admin','Head') DEFAULT 'Employee';
+
+-- if you do not have email/password columns, add them:
+ALTER TABLE employee
+  ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE,
+  ADD COLUMN IF NOT EXISTS password VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS dept_id INT,
+  ADD CONSTRAINT IF NOT EXISTS fk_employee_dept FOREIGN KEY (dept_id) REFERENCES department(dept_id);
+```
+
+> Run these in your MySQL client. Adjust `IF NOT EXISTS` syntax if your MySQL version doesn't support it (split into conditional checks).
+
+---
+
+## 2) Frontend — `auth.html`
+
+Replace or create `source/auth.html` with the following. It includes:
+
+* Sign-up form capturing name, phone, email, password, department, role (Employee / Manager / Head), joining date, and optional employee-code/ID.
+* Login form.
+* The department dropdown is loaded from `/api/departments`.
+* The role choice includes `Head` for the designated head employee.
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>WasteTrack — Authentication</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* small inline styles for demo */
+    body { font-family: Arial, sans-serif; background:#f3f6f8; padding:24px; }
+    .container { max-width:1000px; margin:0 auto; display:flex; gap:24px; }
+    .card { background:#fff; padding:18px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); flex:1; }
+    h2 { margin-top:0 }
+    label { display:block; margin-top:10px; font-size:14px; }
+    input, select { width:100%; padding:8px 10px; margin-top:6px; box-sizing:border-box; border-radius:6px; border:1px solid #ddd; }
+    .row { display:flex; gap:12px }
+    .row > * { flex:1; }
+    button { margin-top:14px; padding:10px 14px; border:0; background:#2b8a3e; color:#fff; border-radius:6px; cursor:pointer; }
+    button.secondary { background:#666; }
+    .muted { font-size:13px; color:#666; margin-top:8px; }
+    .error { color:crimson; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sign Up -->
+    <div class="card">
+      <h2>Create Employee / Manager / Head</h2>
+      <form id="signupForm">
+        <label for="fullName">Full name</label>
+        <input id="fullName" name="name" required />
+
+        <div class="row">
+          <div>
+            <label for="phone">Contact number</label>
+            <input id="phone" name="phone" required />
+          </div>
+          <div>
+            <label for="joinDate">Joining date</label>
+            <input id="joinDate" name="join_date" type="date" />
+          </div>
+        </div>
+
+        <label for="email">Email (login)</label>
+        <input id="email" name="email" type="email" required />
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required minlength="6"/>
+
+        <label for="deptSelect">Department</label>
+        <select id="deptSelect" name="dept_id" required>
+          <option value="">Loading departments...</option>
+        </select>
+
+        <label for="roleSelect">Role</label>
+        <select id="roleSelect" name="role" required>
+          <option value="Employee">Employee</option>
+          <option value="Manager">Manager</option>
+          <option value="Head">Head</option>
+        </select>
+
+        <label for="empCode">Employee code / unique id (optional)</label>
+        <input id="empCode" name="emp_code" placeholder="eg. EMP-1023" />
+
+        <div class="muted">Choose 'Head' only for the single head user (or those who should manage roles).</div>
+        <div id="signupMsg" class="error"></div>
+        <button type="submit">Sign up</button>
+      </form>
+    </div>
+
+    <!-- Login -->
+    <div class="card">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" required />
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" required />
+        <div id="loginMsg" class="error"></div>
+        <button type="submit">Login</button>
+        <button type="button" class="secondary" id="toTrackBtn">Track Complaint</button>
+      </form>
+      <p class="muted">After login you will be redirected based on role: Employee → employee.html, Manager → manager.html, Head → head.html</p>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+</body>
+</html>
+```
+
+---
+
+## 3) Frontend logic — `auth.js`
+
+Create or replace `source/auth.js` with this. It:
+
+* loads departments to populate dropdown
+* handles `signupForm` submit: POST `/api/employees/register`
+* handles `loginForm` submit: POST `/api/employees/login`
+* saves minimal user info in `sessionStorage` (id, name, role, dept_id)
+* redirects to `employee.html`, `manager.html`, or `head.html` depending on role
+
+```javascript
+// source/auth.js
+(async function () {
+  const apiBase = '/api/employees';
+
+  // helper for fetch
+  async function postJson(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res;
+  }
+
+  // populate departments
+  async function loadDepartments() {
+    try {
+      const res = await fetch('/api/departments');
+      const depts = await res.json();
+      const sel = document.getElementById('deptSelect');
+      sel.innerHTML = '<option value="">Select Department</option>';
+      depts.forEach(d => sel.add(new Option(d.name, d.dept_id)));
+    } catch (e) {
+      console.error('Failed to load departments', e);
+      const sel = document.getElementById('deptSelect');
+      sel.innerHTML = '<option value="">Unable to load</option>';
+    }
+  }
+
+  // sign-up
+  document.getElementById('signupForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msg = document.getElementById('signupMsg'); msg.textContent = '';
+    const data = {
+      name: document.getElementById('fullName').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      join_date: document.getElementById('joinDate').value || null,
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+      dept_id: document.getElementById('deptSelect').value || null,
+      role: document.getElementById('roleSelect').value,
+      emp_code: document.getElementById('empCode').value.trim() || null
+    };
+
+    // basic client validation
+    if (!data.name || !data.email || !data.password) {
+      msg.textContent = 'Name, email and password are required.';
+      return;
+    }
+
+    try {
+      const res = await postJson(apiBase + '/register', data);
+      const body = await res.json();
+      if (!res.ok) {
+        msg.textContent = body.error || 'Registration failed';
+        return;
+      }
+      // success
+      alert('Registered successfully. You can now log in.');
+      document.getElementById('signupForm').reset();
+    } catch (err) {
+      console.error(err);
+      msg.textContent = 'Registration failed (network).';
+    }
+  });
+
+  // login
+  document.getElementById('loginForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msg = document.getElementById('loginMsg'); msg.textContent = '';
+    const payload = {
+      email: document.getElementById('loginEmail').value.trim(),
+      password: document.getElementById('loginPassword').value
+    };
+    try {
+      const res = await postJson(apiBase + '/login', payload);
+      const body = await res.json();
+      if (!res.ok) {
+        msg.textContent = body.error || 'Login failed';
+        return;
+      }
+      // store user info (not password)
+      const user = {
+        emp_id: body.emp_id,
+        name: body.name,
+        role: body.role,
+        dept_id: body.dept_id,
+        email: body.email
+      };
+      sessionStorage.setItem('wt_user', JSON.stringify(user));
+
+      // redirect by role
+      if (user.role === 'Head') {
+        window.location.href = '/head.html';
+      } else if (user.role === 'Manager') {
+        window.location.href = '/manager.html';
+      } else {
+        // Employee / default
+        window.location.href = '/employee.html';
+      }
+    } catch (err) {
+      console.error(err);
+      msg.textContent = 'Login failed (network).';
+    }
+  });
+
+  // optional: go to public track page
+  document.getElementById('toTrackBtn').addEventListener('click', () => {
+    window.location.href = '/track.html';
+  });
+
+  await loadDepartments();
+})();
+```
+
+---
+
+## 4) Head dashboard — `head.html`
+
+Create `source/head.html`: lets Head view all employees, change role, delete employee. Uses `/api/employees` endpoints (GET, PUT, DELETE). The UI includes search and department filter.
+
+```html
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>WasteTrack — Head Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { font-family: Arial, sans-serif; padding:20px; background:#f6f8fa; }
+    .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    th,td { padding:10px 12px; border-bottom:1px solid #eee; text-align:left; }
+    th { background:#fafafa; font-weight:600; }
+    .controls { display:flex; gap:8px; }
+    .btn { padding:8px 10px; border-radius:6px; border:0; cursor:pointer; }
+    .btn.danger { background:#c0392b; color:#fff; }
+    .btn.primary { background:#2b8a3e; color:#fff; }
+    select.roleSelect{ padding:6px; }
+    input.search { padding:8px; width:240px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Head — Manage Employees & Roles</h1>
+    <div>
+      <input class="search" id="searchInput" placeholder="Search name or email" />
+      <select id="filterDept"><option value="">All Departments</option></select>
+      <button class="btn primary" id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+
+  <table id="employeesTable">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>Email</th><th>Department</th><th>Role</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const apiBase = '/api/employees';
+
+    async function fetchDepts(){
+      try {
+        const d = await fetch('/api/departments').then(r=>r.json());
+        const sel = document.getElementById('filterDept');
+        sel.innerHTML = '<option value="">All Departments</option>';
+        d.forEach(x => sel.add(new Option(x.name, x.dept_id)));
+      } catch(e){ console.error(e); }
+    }
+
+    async function loadEmployees(){
+      const q = new URLSearchParams();
+      const search = document.getElementById('searchInput').value.trim();
+      const dept = document.getElementById('filterDept').value;
+      if(search) q.append('q', search);
+      if(dept) q.append('dept_id', dept);
+      const rows = await fetch(apiBase + '?' + q.toString()).then(r=>r.json());
+      const tbody = document.querySelector('#employeesTable tbody');
+      tbody.innerHTML = rows.map(u => `
+        <tr data-id="${u.emp_id}">
+          <td>${u.emp_id}</td>
+          <td>${u.name}</td>
+          <td>${u.email||''}</td>
+          <td>${u.department_name || ''}</td>
+          <td>
+            <select class="roleSelect" data-id="${u.emp_id}">
+              <option ${u.role==='Employee'?'selected':''}>Employee</option>
+              <option ${u.role==='Manager'?'selected':''}>Manager</option>
+              <option ${u.role==='Head'?'selected':''}>Head</option>
+              <option ${u.role==='Admin'?'selected':''}>Admin</option>
+            </select>
+          </td>
+          <td>
+            <button class="btn" onclick="saveRole(${u.emp_id})">Save</button>
+            <button class="btn danger" onclick="deleteEmp(${u.emp_id})">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveRole(empId){
+      const sel = document.querySelector(`select.roleSelect[data-id="${empId}"]`);
+      const newRole = sel.value;
+      if(!confirm(`Change role of ${empId} to ${newRole}?`)) return;
+      const res = await fetch(apiBase + '/' + empId + '/role', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ role: newRole })
+      });
+      const body = await res.json();
+      if (!res.ok) return alert(body.error || 'Failed');
+      alert('Role updated');
+      loadEmployees();
+    }
+
+    async function deleteEmp(empId){
+      if(!confirm('Delete employee id ' + empId + '? This is irreversible.')) return;
+      const res = await fetch(apiBase + '/' + empId, { method: 'DELETE' });
+      const body = await res.json();
+      if (!res.ok) return alert(body.error || 'Delete failed');
+      alert('Deleted');
+      loadEmployees();
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadEmployees);
+    document.getElementById('searchInput').addEventListener('input', () => setTimeout(loadEmployees, 250));
+    document.getElementById('filterDept').addEventListener('change', loadEmployees);
+
+    (async function init(){
+      await fetchDepts();
+      await loadEmployees();
+    })();
+  </script>
+</body>
+</html>
+```
+
+---
+
+## 5) Backend — `routes/employees.js`
+
+Create `backend/routes/employees.js` (or update your existing file). This provides:
+
+* `POST /api/employees/register` — create employee (bcrypt password hashing).
+* `POST /api/employees/login` — login (bcrypt compare).
+* `GET /api/employees` — list employees (optional query `q` or `dept_id`) with department name.
+* `PUT /api/employees/:id/role` — update role (only Head should call this in production; we assume demo environment).
+* `DELETE /api/employees/:id` — delete employee.
+
+**Install dependencies**: `npm i bcrypt mysql2` (if not already present). Using `mysql2/promise` pool exported from `../db`.
+
+```js
+// backend/routes/employees.js
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcrypt');
+const pool = require('../db'); // your mysql2/promise pool
+const SALT_ROUNDS = 10;
+
+// Register
+router.post('/register', async (req, res) => {
+  try {
+    const { name, phone, join_date, email, password, dept_id, role, emp_code } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ error: 'name,email,password required' });
+
+    // check existing
+    const [[exists]] = await pool.query('SELECT emp_id FROM employee WHERE email = ?', [email]);
+    if (exists) return res.status(400).json({ error: 'Email already used' });
+
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const [result] = await pool.query(
+      `INSERT INTO employee (name, phone, join_date, email, password, dept_id, role, emp_code) VALUES (?,?,?,?,?,?,?,?)`,
+      [name, phone||null, join_date||null, email, hash, dept_id||null, role||'Employee', emp_code||null]
+    );
+    const empId = result.insertId;
+    const [[employee]] = await pool.query('SELECT emp_id, name, email, role, dept_id FROM employee WHERE emp_id = ?', [empId]);
+    res.json(employee);
+  } catch (err) {
+    console.error('register error', err);
+    res.status(500).json({ error: 'registration failed' });
+  }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'email & password required' });
+    const [rows] = await pool.query('SELECT * FROM employee WHERE email = ?', [email]);
+    const user = rows[0];
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // don't return password hash
+    const safe = {
+      emp_id: user.emp_id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      dept_id: user.dept_id
+    };
+    res.json(safe);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'login failed' });
+  }
+});
+
+// List employees (optional query: q, dept_id)
+router.get('/', async (req, res) => {
+  try {
+    const { q, dept_id } = req.query;
+    let sql = `SELECT e.emp_id, e.name, e.email, e.role, e.dept_id, d.name AS department_name FROM employee e LEFT JOIN department d ON e.dept_id = d.dept_id WHERE 1=1 `;
+    const params = [];
+    if (q) {
+      sql += ' AND (e.name LIKE ? OR e.email LIKE ? OR e.emp_code LIKE ?)';
+      const like = `%${q}%`;
+      params.push(like, like, like);
+    }
+    if (dept_id) {
+      sql += ' AND e.dept_id = ?';
+      params.push(dept_id);
+    }
+    sql += ' ORDER BY e.emp_id DESC LIMIT 1000';
+    const [rows] = await pool.query(sql, params);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'failed to list employees' });
+  }
+});
+
+// Update role
+router.put('/:id/role', async (req, res) => {
+  try {
+    const empId = req.params.id;
+    const { role } = req.body;
+    if (!role) return res.status(400).json({ error: 'role required' });
+    // validate role
+    const allowed = ['Employee','Manager','Admin','Head'];
+    if (!allowed.includes(role)) return res.status(400).json({ error: 'invalid role' });
+
+    await pool.query('UPDATE employee SET role = ? WHERE emp_id = ?', [role, empId]);
+    const [[employee]] = await pool.query('SELECT emp_id, name, email, role, dept_id FROM employee WHERE emp_id = ?', [empId]);
+    res.json(employee);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'update failed' });
+  }
+});
+
+// Delete employee
+router.delete('/:id', async (req, res) => {
+  try {
+    const empId = req.params.id;
+    // optionally: cascade or check constraints. For demo, attempt delete.
+    await pool.query('DELETE FROM employee WHERE emp_id = ?', [empId]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'delete failed' });
+  }
+});
+
+module.exports = router;
+```
+
+**Notes:**
+
+* This code trusts the caller (Head) to update roles. In production you would check session/authorization to ensure only Head can call role changes and delete employees.
+* `bcrypt` is used for hashing. Install with `npm i bcrypt`. On some systems you may need `npm i bcrypt --build-from-source` or use `bcryptjs` if build fails.
+
+---
+
+## 6) Mount the router in `server.js`
+
+In your `backend/server.js` (or `server.js` root), add:
+
+```js
+const employeesRouter = require('./routes/employees');
+app.use('/api/employees', employeesRouter);
+```
+
+Make sure `app.use(express.json());` is present so JSON bodies are parsed.
+
+---
+
+## 7) Frontend / head security & role check (simple)
+
+I assumed `auth.js` stores the user in `sessionStorage`. On `head.html` and other protected pages you should verify the user is logged in and has the correct role (client-side check for demo):
+
+At the top of `head.html` (inside a `<script>` before any fetches) add:
+
+```js
+const me = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
+if (!me || me.role !== 'Head') {
+  alert('You must be logged in as Head to access this page.');
+  window.location.href = '/auth.html';
+}
+```
+
+Do the same on `manager.html` / `employee.html` with role checks.
+
+---
+
+## 8) Integration checklist — what to do next
+
+1. Add the DB changes (SQL) if not already present.
+2. Add `backend/routes/employees.js`, and mount it in `server.js`.
+3. Ensure `../db` exports a `mysql2/promise` pool (we used that earlier).
+4. Put `auth.html`, `auth.js`, `head.html` into your `source/` web folder (or where static files are served).
+5. `npm i bcrypt mysql2` if not present.
+6. Start server and test:
+
+   * `POST /api/employees/register` from the sign-up form.
+   * `POST /api/employees/login` for login.
+   * Log in as Head -> go to `/head.html` -> change roles and delete employees.
+7. Optionally seed a Head user directly in DB (INSERT with hashed password) to ensure Head exists for testing.
+
+---
+
+## 9) Example seed for a Head (quick test)
+
+Generate hash by node REPL or use this route to register with role 'Head'. If you want to directly insert (not recommended), use:
+
+```js
+// generate hash in node REPL
+const bcrypt = require('bcrypt');
+bcrypt.hash('SuperSecurePassword', 10).then(h => console.log(h));
+```
+
+Then insert into DB:
+
+```sql
+INSERT INTO employee (name, email, password, role) VALUES ('Head User','head@city.gov','[hash from node]', 'Head');
+```
+
+---

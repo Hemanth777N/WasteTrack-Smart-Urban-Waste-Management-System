@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET /api/filter/complaints?dept_id=1&route_id=2&status=Open
+// GET /api/filter/complaints?status=Open&date=2025-10-24
 router.get('/complaints', async (req, res) => {
-  const { dept_id, route_id, status } = req.query;
+  // Added 'date'
+  const { dept_id, route_id, status, date } = req.query;
   
-  // Base query joins all necessary tables
   let sql = `
     SELECT 
-      c.complaint_id, c.citizen_name, c.status, c.location,
+      c.complaint_id, c.citizen_name, c.contact_no, c.status, c.location, c.description, c.complaint_date,
       d.name AS department_name, 
       r.route_name, 
       e.name AS assigned_employee,
@@ -34,6 +34,12 @@ router.get('/complaints', async (req, res) => {
   if (status) { 
     sql += ' AND c.status = ?'; 
     params.push(status); 
+  }
+  // --- NEW DATE FILTER ---
+  if (date) {
+    // This query finds all complaints from the start of the selected day
+    sql += ' AND DATE(c.complaint_date) = ?';
+    params.push(date);
   }
   
   sql += ' ORDER BY c.complaint_id DESC LIMIT 500';

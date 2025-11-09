@@ -7,183 +7,280 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="/style.css">
   <style>
-    /* quick styles for cards/grid */
-    .grid { 
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 1rem;
+    /* --- New Grid Layout --- */
+    .stats-grid-main {
+      display: grid;
+      grid-template-columns: 2fr 1fr; /* 2/3 column for main chart, 1/3 for sidebar */
+      gap: 1.5rem;
     }
-    /* .card is already in your style.css, so we just adjust it */
-    .card { 
-        flex: 1 1 350px; 
-        margin-bottom: 0; /* Already has gap */
+    .stats-grid-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
     }
-    canvas { 
-        max-width: 100%; 
-        height: 320px; 
+    .stats-grid-bottom {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* Two columns for the friendly views */
+      gap: 1.5rem;
+      margin-top: 1.5rem;
     }
-    #overview p { 
-        font-size: 1.2rem; 
-        margin: 0.5rem 0; 
-        text-align: left; 
+    
+    /* Responsive layout for smaller screens */
+    @media (max-width: 900px) {
+      .stats-grid-main, .stats-grid-bottom {
+        grid-template-columns: 1fr; /* Stack everything */
+      }
     }
-    #overview ul {
-        text-align: left;
-        padding-left: 2rem;
-        font-size: 1.1rem;
+
+    /* --- Stat Card Styling (User-Friendly Lists) --- */
+    .stat-card {
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+      border: 1px solid #eee;
     }
-    /* Ensure table in card doesn't overflow */
-    .table-scroll-wrapper {
-        max-height: 400px; /* Add a max-height for scroll */
-        overflow-y: auto;
+    .stat-card h3 {
+      font-size: 1.25rem;
+      color: var(--text-dark);
+      margin-top: 0;
+      margin-bottom: 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--primary-green);
+      padding-bottom: 0.75rem;
     }
-    table {
-        width: 100%;
-        min-width: 0; /* Override min-width from style.css */
+    .stat-card .chart-container {
+      position: relative;
+      height: 350px;
+      width: 100%;
     }
+    /* Styles for the new friendly lists */
+    .stat-card .overview-item,
+    .stat-card .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.1rem;
+      padding: 1.25rem 0.5rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .stat-card .list-item:last-child,
+    .stat-card .overview-item:last-child {
+      border-bottom: none;
+    }
+    .stat-card .overview-item span,
+    .stat-card .list-item .item-title {
+      color: var(--text-dark);
+      font-weight: 600;
+    }
+    .stat-card .overview-item strong {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+    .stat-card .list-item .item-details {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      text-align: right;
+    }
+    .stat-card .overview-item .resolved { color: var(--status-resolved, #2ecc71); }
+    .stat-card .overview-item .pending { color: var(--status-pending, #f39c12); }
   </style>
 </head>
 <body>
   <div class="page-container">
     <h2>Public Statistics</h2>
 
-    <div class="grid">
-      <div class="card">
-        <h3>Vehicle Usage</h3>
-        <canvas id="vehiclePie"></canvas>
-      </div>
-
-      <div class="card">
+    <!-- Main Grid: Charts + Overview -->
+    <div class="stats-grid-main">
+      
+      <!-- Column 1: Main Chart -->
+      <div class="stat-card">
         <h3>Waste Collected per Route (Total Kg)</h3>
-        <canvas id="wasteBar"></canvas>
+        <div class="chart-container" style="height: 450px;">
+          <canvas id="wasteBarChart"></canvas>
+        </div>
       </div>
 
-      <div class="card">
-        <h3>Overview</h3>
-        <div id="overview" style="padding: 1rem;">
-          <div class="loader-container"><span class="loader"></span></div>
+      <!-- Column 2: Sidebar Cards -->
+      <div class="stats-grid-sidebar">
+        <div class="stat-card">
+          <h3>Overview</h3>
+          <div id="overview-content">
+            <div class="loader-container"><span class="loader"></span></div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <h3>Vehicle Usage (Top 8)</h3>
+          <div class="chart-container" style="height: 300px;">
+            <canvas id="vehiclePieChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Tables from Views -->
-    <div class="card">
-      <h3>Employee Performance (v_employee_performance)</h3>
-      <div class="table-scroll-wrapper">
-        <table id="viewEmpPerfTable"><thead></thead><tbody></tbody></table>
+    <!-- Bottom Grid: User-Friendly Views -->
+    <div class="stats-grid-bottom">
+      
+      <!-- Department Summary -->
+      <div class="stat-card">
+        <h3>Department Summary</h3>
+        <div id="dept-summary-content">
+          <div class="loader-container"><span class="loader"></span></div>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <h3>Department Summary (v_department_summary)</h3>
-      <div class="table-scroll-wrapper">
-        <table id="viewDeptTable"><thead></thead><tbody></tbody></table>
+      <!-- Pending Complaints -->
+      <div class="stat-card">
+        <h3>Pending Complaints</h3>
+        <div id="pending-complaints-content" style="max-height: 400px; overflow-y: auto;">
+          <div class="loader-container"><span class="loader"></span></div>
+        </div>
       </div>
-    </div>
 
-    <div class="card">
-      <h3>Pending Complaints (v_pending_complaints)</h3>
-      <div class="table-scroll-wrapper">
-        <table id="viewPendingTable"><thead></thead><tbody></tbody></table>
-      </div>
     </div>
   </div>
 
   <script>
-    async function fetchJson(url){ 
-        const r = await fetch(url); 
-        if (!r.ok) throw new Error(`Failed to fetch ${url}`);
-        return r.json(); 
+    // Helper to fetch data
+    async function fetchJson(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch ${url}`);
+      return res.json();
     }
 
-    /**
-     * Generic function to populate a table from a view
-     */
-    async function loadView(viewName, tableId) {
-      const table = document.getElementById(tableId);
-      if (!table) return;
-      const thead = table.querySelector('thead');
-      const tbody = table.querySelector('tbody');
-      tbody.innerHTML = '<tr><td colspan="99" class="loader-container"><span class="loader"></span></td></tr>';
+    // 1. Load Overview Card
+    async function loadOverview() {
+      const container = document.getElementById('overview-content');
       try {
-        const data = await fetchJson('/api/views/' + viewName);
-        thead.innerHTML = '';
-        tbody.innerHTML = '';
-        if (!Array.isArray(data) || !data.length) {
-          tbody.innerHTML = '<tr><td colspan="99">No data found for this view.</td></tr>';
-          return;
-        }
-        const headerRow = document.createElement('tr');
-        Object.keys(data[0]).forEach(key => {
-          const th = document.createElement('th');
-          th.textContent = key;
-          headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
-        data.forEach(row => {
-          const tr = document.createElement('tr');
-          Object.values(row).forEach(val => {
-            const td = document.createElement('td');
-            td.textContent = val;
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
+        const ov = await fetchJson('/api/stats/overview');
+        container.innerHTML = `
+          <div class="overview-item">
+            <span>Pending</span>
+            <strong class="pending">${ov.pending}</strong>
+          </div>
+          <div class="overview-item">
+            <span>Resolved</span>
+            <strong class="resolved">${ov.resolved}</strong>
+          </div>
+        `;
       } catch (e) {
-        console.error(`Failed to load view ${viewName}:`, e);
-        tbody.innerHTML = `<tr><td colspan="99" style="color:red;">Error loading data.</td></tr>`;
+        console.error('Failed to load overview:', e);
+        container.innerHTML = '<p style="color:red;">Error loading overview data.</p>';
       }
     }
 
-    async function renderCharts() {
+    // 2. Load User-Friendly Department Summary
+    async function loadDeptSummary() {
+      const container = document.getElementById('dept-summary-content');
       try {
-        // vehicle usage -> use view v_vehicle_usage
-        const vehicles = await fetchJson('/api/views/v_vehicle_usage');
-        const labelsV = vehicles.map(v => v.vehicle_no + ' (' + v.vehicle_type + ')').slice(0, 8);
-        const valuesV = vehicles.map(v => Number(v.total_assignments)).slice(0, 8);
-
-        new Chart(document.getElementById('vehiclePie'), {
-          type: 'pie',
-          data: { labels: labelsV, datasets: [{ data: valuesV, backgroundColor: ['#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c', '#778ca3'] }] },
-          options: { responsive: true, plugins: { legend: { position: 'right' } } }
-        });
-      } catch (e) { console.error('Failed to load vehicle chart:', e); }
-
-      try {
-        // waste per route -> use view v_waste_collection_stats
-        const waste = await fetchJson('/api/views/v_waste_collection_stats');
-        const labelsW = waste.map(r => r.route_name);
-        const valuesW = waste.map(r => Number(r.total_collected_kg) || 0);
-        new Chart(document.getElementById('wasteBar'), {
-          type: 'bar',
-          data: { labels: labelsW, datasets: [{ label: 'Total kg', data: valuesW, backgroundColor: '#2ecc71' }] },
-          options: { responsive: true, scales: { y: { beginAtZero: true } } }
-        });
-      } catch (e) { console.error('Failed to load waste chart:', e); }
-
-      try {
-        // overview -> use new /api/stats/overview
-        const ov = await fetchJson('/api/stats/overview');
-        const ovDiv = document.getElementById('overview');
-        ovDiv.innerHTML = `
-          <p>Pending Complaints: <strong>${ov.pending}</strong></p>
-          <p>Resolved/Closed: <strong>${ov.resolved}</strong></p>
-          <hr style="margin: 1rem 0;">
-          <p><strong>Top Vehicles (by # of jobs):</strong></p>
-          <ul>
-            ${ov.vehicleUsage.map(v => `<li>${v.vehicle_no} (${v.total_assignments} jobs)</li>`).slice(0, 3).join('')}
-          </ul>
-        `;
-      } catch (e) { console.error('Failed to load overview:', e); }
+        const data = await fetchJson('/api/views/v_department_summary');
+        if (!data.length) {
+            container.innerHTML = '<p>No department data found.</p>';
+            return;
+        }
+        // Render user-friendly list
+        container.innerHTML = data.map(dept => `
+          <div class="list-item">
+            <span class="item-title">${dept.department_name}</span>
+            <span class="item-details">
+              ${dept.total_employees} Employees<br>
+              ${dept.total_vehicles} Vehicles
+            </span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load dept summary:', e);
+        container.innerHTML = '<p style="color:red;">Error loading department data.</p>';
+      }
     }
 
-    // Load all data on page start
+    // 3. Load User-Friendly Pending Complaints
+    async function loadPendingComplaints() {
+        const container = document.getElementById('pending-complaints-content');
+        try {
+            const data = await fetchJson('/api/views/v_pending_complaints');
+            if (!data.length) {
+                container.innerHTML = '<p>No pending complaints. Great job!</p>';
+                return;
+            }
+            // Render user-friendly list
+            container.innerHTML = data.map(c => `
+              <div class="list-item">
+                <span class="item-title" style="font-size: 0.95rem; font-weight: 500;">${c.description}</span>
+                <span class="item-details">
+                  ${c.department_name || 'N/A'}<br>
+                  <span style="font-weight: 700; color: var(--status-pending);">${c.status}</span>
+                </span>
+              </div>
+            `).join('');
+        } catch(e) {
+            console.error('Failed to load pending complaints:', e);
+            container.innerHTML = '<p style="color:red;">Error loading complaints.</p>';
+        }
+    }
+
+    // 4. Load Charts
+    async function loadCharts() {
+      // Waste Collection Bar Chart
+      try {
+        const wasteData = await fetchJson('/api/views/v_waste_collection_stats');
+        const labelsW = wasteData.map(r => r.route_name);
+        const valuesW = wasteData.map(r => Number(r.total_collected_kg) || 0);
+        new Chart(document.getElementById('wasteBarChart'), {
+          type: 'bar',
+          data: { 
+            labels: labelsW, 
+            datasets: [{ 
+              label: 'Total kg', 
+              data: valuesW, 
+              backgroundColor: 'rgba(46, 204, 113, 0.7)',
+              borderColor: 'rgba(46, 204, 113, 1)',
+              borderWidth: 1
+            }] 
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+      } catch (e) { console.error('Failed to load waste chart:', e); }
+      
+      // Vehicle Usage Pie Chart
+      try {
+        const vehicleData = await fetchJson('/api/views/v_vehicle_usage');
+        // Sort by total_assignments descending and take top 8
+        const sortedVehicles = vehicleData.sort((a, b) => b.total_assignments - a.total_assignments).slice(0, 8);
+        
+        const labelsV = sortedVehicles.map(v => v.vehicle_no);
+        const valuesV = sortedVehicles.map(v => Number(v.total_assignments));
+        
+        new Chart(document.getElementById('vehiclePieChart'), {
+          type: 'pie',
+          data: { 
+            labels: labelsV, 
+            datasets: [{ 
+              data: valuesV,
+              backgroundColor: ['#2ecc71', '#3498db', '#9b59b6', '#f1c40f', '#e74c3c', '#778ca3', '#1abc9c', '#e67e22'] 
+            }] 
+          },
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+              legend: { 
+                position: 'bottom', 
+                labels: { boxWidth: 10, padding: 10, font: { size: 10 } } 
+              } 
+            } 
+          }
+        });
+      } catch (e) { console.error('Failed to load vehicle chart:', e); }
+    }
+
+    // Run all load functions on page start
     document.addEventListener('DOMContentLoaded', () => {
-        renderCharts();
-        // Load tables
-        loadView('v_employee_performance', 'viewEmpPerfTable');
-        loadView('v_department_summary', 'viewDeptTable');
-        loadView('v_pending_complaints', 'viewPendingTable');
+      loadOverview();
+      loadDeptSummary();
+      loadPendingComplaints();
+      loadCharts();
     });
   </script>
 </body>
