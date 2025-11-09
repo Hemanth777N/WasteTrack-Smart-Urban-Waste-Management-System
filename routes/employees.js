@@ -69,33 +69,54 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: 'login failed' });
   }
 });
+// routes/employees.js
 
-// List employees for Head dashboard
+// List employees (for Head dashboard OR Manager dropdowns)
 router.get('/', checkAuth, async (req, res) => {
-  // Simple security check
-  if (req.session.role !== 'Head') {
+  // --- FIX 1: UPDATED security check ---
+  // Allow 'Head' OR 'Manager' to access this endpoint
+  if (req.session.role !== 'Head' && req.session.role !== 'Manager') {
       return res.status(403).json({ error: 'Not authorized' });
   }
   
   try {
-    const { q, dept_id } = req.query;
+    const { q, dept_id, role } = req.query; // Check for role query param
     let sql = `SELECT e.emp_id, e.name, e.email, e.role, e.dept_id, d.name AS department_name 
                FROM employee e 
                LEFT JOIN department d ON e.dept_id = d.dept_id 
                WHERE 1=1 `;
     const params = [];
+
+    // --- FIX 2: UPDATED filter logic ---
+    // If the user is a Manager, force the filter to their own department.
+    if (req.session.role === 'Manager') {
+      sql += ' AND e.dept_id = ?';
+      params.push(req.session.dept_id);
+    } 
+    // Only a Head can use the 'dept_id' query param to filter by other departments.
+    else if (dept_id) { 
+      sql += ' AND e.dept_id = ?';
+      params.push(dept_id);
+    }
+
+    // Handle the search query (for Head dashboard)
     if (q) {
       sql += ' AND (e.name LIKE ? OR e.email LIKE ? OR e.emp_code LIKE ?)';
       const like = `%${q}%`;
       params.push(like, like, like);
     }
-    if (dept_id) {
-      sql += ' AND e.dept_id = ?';
-      params.push(dept_id);
+    
+    // Handle the role filter (for Manager dropdown)
+    if (role) {
+        sql += ' AND e.role = ?';
+        params.push(role);
     }
+    
     sql += ' ORDER BY e.emp_id DESC LIMIT 1000';
     const [rows] = await pool.query(sql, params);
-    res.json(rows);
+    
+    // This will now correctly return an array for the manager
+    res.json(rows); 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'failed to list employees' });
