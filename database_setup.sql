@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS Department (
     location VARCHAR(150)
 );
 
--- 2) Employee
+-- 2) Employee-- 2) Employee (Updated with all new fields and 'Head' role)
 CREATE TABLE IF NOT EXISTS Employee (
     emp_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -30,13 +30,15 @@ CREATE TABLE IF NOT EXISTS Employee (
     gender VARCHAR(10),
     salary DECIMAL(10,2),
     job_title VARCHAR(50),
-    contact VARCHAR(15),
+    contact VARCHAR(15),           -- 'phone' from new plan
     address VARCHAR(255),
     dept_id INT,                   -- FK -> Department
     status VARCHAR(20),
     email VARCHAR(100) UNIQUE,
     password VARCHAR(255),
-    role ENUM('Manager', 'Employee', 'Admin') DEFAULT 'Employee', -- Added 'Admin' role
+    role ENUM('Manager', 'Employee', 'Admin', 'Head') DEFAULT 'Employee', -- <-- Added 'Head'
+    join_date DATE,                -- <-- NEW
+    emp_code VARCHAR(50) UNIQUE,   -- <-- NEW
     CONSTRAINT fk_employee_dept FOREIGN KEY (dept_id)
         REFERENCES Department(dept_id)
         ON UPDATE CASCADE

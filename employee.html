@@ -6,6 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WasteTrack - Employee</title>
   <link rel="stylesheet" href="style.css">
+  <script>
+    try {
+      const user = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
+      if (!user || (user.role !== 'Employee' && user.role !== 'Manager' && user.role !== 'Head')) {
+        window.location.href = '/auth.html';
+      }
+    } catch (e) { window.location.href = '/auth.html'; }
+  </script>
 </head>
 
 <body>

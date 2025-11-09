@@ -90,6 +90,14 @@
             cursor: not-allowed;
         }
     </style>
+    <script>
+        try {
+            const user = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
+            if (!user || user.role !== 'Manager'|| user.role !== 'Employee') {
+                window.location.href = '/auth.html';
+            }
+        } catch (e) { window.location.href = '/auth.html'; }
+    </script>
 </head>
 
 <body>

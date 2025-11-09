@@ -5,7 +5,7 @@ const fs = require('fs').promises; // <-- Import fs promises
 const pool = require('./db'); // <-- Import the pool
 
 // Import routes
-const authRoutes = require("./routes/auth");
+const employeesRouter = require('./routes/employees');
 const complaintRoutes = require("./routes/complaints");
 const dataRoutes = require("./routes/data");
 const wasteRoutes = require("./routes/waste");
@@ -38,7 +38,7 @@ app.get("/", (req, res) =>
 );
 
 // Mount API routes under /api
-app.use("/api", authRoutes);
+app.use('/api/employees', employeesRouter);
 app.use("/api", complaintRoutes);
 app.use("/api", dataRoutes);
 app.use("/api", wasteRoutes);

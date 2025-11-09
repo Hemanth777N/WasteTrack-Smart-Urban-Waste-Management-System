@@ -627,9 +627,6 @@ Keep the interface **clean and modern**:
 
 ---
 
-
-Absolutely — I can do all of that. Below I give you **ready-to-paste, complete code** for the changes you asked:
-
 * enhanced `auth.html` (sign-up + login forms that capture all employee fields, including department + role selection),
 * `auth.js` (client-side logic to submit register/login, client-side validation, redirect by role),
 * `head.html` (head’s dashboard: list employees, change role, delete employee),
@@ -1219,4 +1216,4 @@ Then insert into DB:
 INSERT INTO employee (name, email, password, role) VALUES ('Head User','head@city.gov','[hash from node]', 'Head');
 ```
 
----
+---t

@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>WasteTrack — Head Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Using your existing :root variables */
+    body { 
+        font-family: 'Poppins', sans-serif; 
+        padding: 20px; 
+        background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+    }
+    .top { 
+        display:flex; 
+        align-items:center; 
+        justify-content:space-between; 
+        margin-bottom:12px; 
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .top h1 { 
+        color: var(--primary-green); 
+        margin: 0; 
+        font-size: 2rem;
+        text-align: left;
+    }
+    .top .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    table { 
+        width:100%; 
+        border-collapse:collapse; 
+        background: var(--bg-light); 
+        border-radius:12px; 
+        overflow:hidden; 
+        box-shadow: 0 10px 30px var(--shadow-color);
+    }
+    th,td { 
+        padding: 1rem 1.25rem; 
+        border-bottom:1px solid var(--border-light); 
+        text-align:left; 
+        vertical-align: middle;
+    }
+    th { 
+        background: var(--primary-green); 
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+    }
+    .btn { 
+        padding:8px 10px; 
+        border-radius:6px; 
+        border:0; 
+        cursor:pointer; 
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn.danger { background:#e74c3c; color:#fff; }
+    .btn.danger:hover { background: #c0392b; }
+    .btn.primary { background:#27ae60; color:#fff; }
+    .btn.primary:hover { background: #2ecc71; }
+    
+    input.search, select.filterSelect { 
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+        font-size: 0.9rem;
+    }
+    .action-cell { display: flex; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Head Dashboard</h1>
+    <div class="controls">
+      <input class="search" id="searchInput" placeholder="Search name or email" />
+      <select class="filterSelect" id="filterDept"><option value="">All Departments</option></select>
+      <button class="btn primary" id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+
+  <table id="employeesTable">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>Email</th><th>Department</th><th>Role</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr><td colspan="6" class="loader-container"><span class="loader"></span></td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    const apiBase = '/api/employees';
+    let currentUser = {};
+
+    // --- Security Check ---
+    // This is a simple client-side check. The server endpoints also check.
+    try {
+        currentUser = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
+        if (!currentUser || currentUser.role !== 'Head') {
+            alert('Access Denied. You must be logged in as Head.');
+            window.location.href = '/auth.html';
+        }
+    } catch(e) {
+        window.location.href = '/auth.html';
+    }
+
+    async function fetchDepts(){
+      try {
+        const d = await fetch('/api/departments').then(r=>r.json());
+        const sel = document.getElementById('filterDept');
+        sel.innerHTML = '<option value="">All Departments</option>';
+        d.forEach(x => sel.add(new Option(x.name, x.dept_id)));
+      } catch(e){ console.error(e); }
+    }
+
+    async function loadEmployees(){
+      const tbody = document.querySelector('#employeesTable tbody');
+      tbody.innerHTML = `<tr><td colspan="6" class="loader-container"><span class="loader"></span></td></tr>`;
+      
+      const q = new URLSearchParams();
+      const search = document.getElementById('searchInput').value.trim();
+      const dept = document.getElementById('filterDept').value;
+      if(search) q.append('q', search);
+      if(dept) q.append('dept_id', dept);
+      
+      try {
+        const rows = await fetch(apiBase + '?' + q.toString()).then(r=>r.json());
+        
+        if (!Array.isArray(rows)) {
+            tbody.innerHTML = `<tr><td colspan="6" style="color:red;">Error: ${rows.error || 'Failed to load employees'}</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rows.map(u => `
+          <tr data-id="${u.emp_id}">
+            <td>${u.emp_id}</td>
+            <td>${u.name}</td>
+            <td>${u.email||''}</td>
+            <td>${u.department_name || 'N/A'}</td>
+            <td>
+              <select class="filterSelect roleSelect" data-id="${u.emp_id}" ${u.emp_id === currentUser.emp_id ? 'disabled' : ''}>
+                <option ${u.role==='Employee'?'selected':''}>Employee</option>
+                <option ${u.role==='Manager'?'selected':''}>Manager</option>
+                <option ${u.role==='Head'?'selected':''}>Head</option>
+                <option ${u.role==='Admin'?'selected':''}>Admin</option>
+              </select>
+            </td>
+            <td class="action-cell">
+              <button class="btn primary" onclick="saveRole(${u.emp_id})" ${u.emp_id === currentUser.emp_id ? 'disabled' : ''}>Save</button>
+              <button class="btn danger" onclick="deleteEmp(${u.emp_id})" ${u.emp_id === currentUser.emp_id ? 'disabled' : ''}>Delete</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+          console.error(e);
+          tbody.innerHTML = `<tr><td colspan="6" style="color:red;">Failed to fetch employees.</td></tr>`;
+      }
+    }
+
+    async function saveRole(empId){
+      const sel = document.querySelector(`select.roleSelect[data-id="${empId}"]`);
+      const newRole = sel.value;
+      if(!confirm(`Change role of Employee ID ${empId} to ${newRole}?`)) return;
+      
+      try {
+        const res = await fetch(apiBase + '/' + empId + '/role', {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ role: newRole })
+        });
+        const body = await res.json();
+        if (!res.ok) return alert(body.error || 'Failed');
+        alert('Role updated');
+        loadEmployees(); // Refresh
+      } catch(e) { alert('An error occurred.'); }
+    }
+
+    async function deleteEmp(empId){
+      if(!confirm('Delete Employee ID ' + empId + '? This is irreversible.')) return;
+      
+      try {
+        const res = await fetch(apiBase + '/' + empId, { method: 'DELETE' });
+        const body = await res.json();
+        if (!res.ok) return alert(body.error || 'Delete failed');
+        alert('Employee deleted');
+        loadEmployees(); // Refresh
+      } catch(e) { alert('An error occurred.'); }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadEmployees);
+    document.getElementById('searchInput').addEventListener('input', loadEmployees);
+    document.getElementById('filterDept').addEventListener('change', loadEmployees);
+
+    (async function init(){
+      await fetchDepts();
+      await loadEmployees();
+    })();
+  </script>
+</body>
+</html>

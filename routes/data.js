@@ -53,31 +53,6 @@ router.get("/routes/:dept_id", async (req, res) => {
   }
 });
 
-// GET /api/employees
-router.get("/employees", checkAuth, async (req, res) => {
-  try {
-    const { role, dept_id } = req.query;
-    let sql = "SELECT emp_id, name, job_title, contact, dept_id, role FROM Employee";
-    const params = [];
-    const clauses = [];
-    const searchDept = dept_id || (req.session.role === "Manager" ? req.session.dept_id : null);
-    if (role) {
-      clauses.push("role = ?");
-      params.push(role);
-    }
-    if (searchDept) {
-      clauses.push("dept_id = ?");
-      params.push(searchDept);
-    }
-    if (clauses.length) sql += " WHERE " + clauses.join(" AND ");
-    const [rows] = await pool.query(sql, params);
-    res.json(rows);
-  } catch (err) {
-    console.error("Error fetching employees:", err);
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
 // GET /api/vehicles
 router.get("/vehicles", checkAuth, async (req, res) => {
   try {
