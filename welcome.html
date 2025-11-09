@@ -13,7 +13,7 @@
 
   <meta name="description" content="WasteTrack — smart city waste management. Report complaints, manage routes, and analyze stats." />
 </head>
-<body>
+<body class="page-welcome">
   <header class="nav">
     <div class="nav-inner">
       <div class="brand">
@@ -46,9 +46,8 @@
         </div>
 
         <div class="quick-links">
-          <a href="auth.html?role=Employee">Employee login</a>
-          <a href="auth.html?role=Manager">Manager login</a>
-          <a href="auth.html?role=Head">Head login</a>
+          <a href="auth.html">Employee/Manager login</a>
+          <a href="auth.html">Head login</a>
         </div>
       </div>
 
@@ -60,7 +59,7 @@
             <li><strong id="metricResolved">—</strong><small>Resolved</small></li>
             <li><strong id="metricVehicles">—</strong><small>Active vehicles</small></li>
           </ul>
-          <a class="btn small primary" href="stats.html">Open Analytics</a>
+          <a class="btn small primary" href="stats.html" style="width: 100%;">Open Analytics</a>
         </div>
       </aside>
     </div>
@@ -96,12 +95,15 @@
     // simple dynamic small metric fetch for hero card
     (async function loadMetrics(){
       try{
-        const res = await fetch('/api/stats/overview');
-        if(!res.ok) return;
+        // This endpoint already exists in your routes/views.js
+        const res = await fetch('/api/stats/overview'); 
+        if(!res.ok) throw new Error('Failed to fetch stats');
         const data = await res.json();
+        
         document.getElementById('metricPending').textContent = data.pending ?? '0';
         document.getElementById('metricResolved').textContent = data.resolved ?? '0';
-        document.getElementById('metricVehicles').textContent = (data.vehicleUsage || []).length || '0';
+        // Get vehicle count from the v_vehicle_usage array
+        document.getElementById('metricVehicles').textContent = (data.vehicleUsage || []).length || '0'; 
       }catch(e){
         console.warn('metrics load failed', e);
       }

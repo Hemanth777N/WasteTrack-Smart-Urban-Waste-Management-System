@@ -90,6 +90,7 @@
             cursor: not-allowed;
         }
     </style>
+    <!-- This first script check is fine. It's what allows the "flash" -->
     <script>
         try {
             const user = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
@@ -188,11 +189,15 @@
 
         async function checkLogin() {
             try {
-                const res = await fetch('/api/me');
-                if (!res.ok) throw new Error('Not logged in');
+                // --- THIS IS THE FIX ---
+                const res = await fetch('/api/employees/me'); // Changed from /api/me
+                // --- END FIX ---
+
+                if (!res.ok) throw new Error('Not logged in'); // Server session is invalid
                 currentUser = await res.json();
 
-                if (currentUser.role !== 'Manager') {
+                // This is a secondary check in case sessionStorage and server session are out of sync
+                if (currentUser.role !== 'Manager' && currentUser.role !== 'Head') {
                     window.location.href = '/auth.html';
                     return;
                 }
@@ -209,6 +214,7 @@
                 applyFilters();
             } catch (e) {
                 console.error(e);
+                // This catch block is what was redirecting you
                 window.location.href = '/auth.html';
             }
         }
@@ -390,7 +396,10 @@
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
-            await fetch('/api/logout', { method: 'POST' });
+            // --- THIS IS THE FIX ---
+            await fetch('/api/employees/logout', { method: 'POST' }); // Changed from /api/logout
+            // --- END FIX ---
+            sessionStorage.removeItem('wt_user'); // Clear client-side session
             alert('You have been logged out.');
             window.location.href = '/welcome.html';
         });

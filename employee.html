@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WasteTrack - Employee</title>
   <link rel="stylesheet" href="style.css">
+  <!-- This first script check is fine. It's what allows the "flash" -->
   <script>
     try {
       const user = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
@@ -76,17 +77,23 @@
 
     async function checkLogin() {
       try {
-        const res = await fetch('/api/me');
-        if (!res.ok) throw new Error('Not logged in');
+        // --- THIS IS THE FIX ---
+        const res = await fetch('/api/employees/me'); // Changed from /api/me
+        // --- END FIX ---
+        
+        if (!res.ok) throw new Error('Not logged in'); // Server session is invalid
         currentUser = await res.json();
 
-        if (currentUser.role !== 'Employee') {
-          window.location.href = '/auth.html';
-          return;
+        // Secondary check (allowing all roles as per <head> script)
+        if (!currentUser.role) { 
+            window.location.href = '/auth.html';
+            return;
         }
+
         document.getElementById('empName').textContent = `(${currentUser.name})`;
         loadTasks(); // Load tasks after login
       } catch (e) {
+        // This catch block is what was redirecting you
         window.location.href = '/auth.html';
       }
     }
@@ -114,7 +121,7 @@
         myTasks.forEach(c => {
           if (c.complaint_id) {
             // Only show the latest status for a complaint
-            if (!uniqueComplaints.has(c.complaint_id) || c.status !== 'Resolved') {
+            if (!uniqueComplaints.has(c.complaint_id) || (c.status !== 'Resolved' && c.status !== 'Closed')) {
               uniqueComplaints.set(c.complaint_id, c);
             }
           }
@@ -193,9 +200,12 @@
       } catch (err) { console.error(err); showMessage('Network error', 'error'); }
     });
 
-    // --- Logout Button (no change needed) ---
+    // --- Logout Button ---
     document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST' });
+      // --- THIS IS THE FIX ---
+      await fetch('/api/employees/logout', { method: 'POST' }); // Changed from /api/logout
+      // --- END FIX ---
+      sessionStorage.removeItem('wt_user'); // Clear client-side session
       alert('You have been logged out.');
       window.location.href = '/welcome.html';
     });
