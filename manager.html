@@ -93,7 +93,8 @@
     <script>
         try {
             const user = JSON.parse(sessionStorage.getItem('wt_user') || 'null');
-            if (!user || user.role !== 'Manager'|| user.role !== 'Employee') {
+            // Correct Logic: if user is NOT Manager AND NOT Head, redirect.
+            if (!user || (user.role !== 'Manager' && user.role !== 'Head')) {
                 window.location.href = '/auth.html';
             }
         } catch (e) { window.location.href = '/auth.html'; }

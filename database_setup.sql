@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS Department (
     location VARCHAR(150)
 );
 
--- 2) Employee-- 2) Employee (Updated with all new fields and 'Head' role)
+-- 2) Employee (Updated with all new fields and 'Head' role)
 CREATE TABLE IF NOT EXISTS Employee (
     emp_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS Employee (
     gender VARCHAR(10),
     salary DECIMAL(10,2),
     job_title VARCHAR(50),
-    contact VARCHAR(15),           -- 'phone' from new plan
+    contact VARCHAR(15),           -- 'phone' from new plan maps to this
     address VARCHAR(255),
     dept_id INT,                   -- FK -> Department
     status VARCHAR(20),
