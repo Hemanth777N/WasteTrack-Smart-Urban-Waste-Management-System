@@ -90,13 +90,14 @@ router.put("/complaints/:id/status", checkAuth, async (req, res) => {
     res.status(500).json({ error: "Update failed" });
   }
 });
+// routes/complaints.js
 
 // --- UPDATED ASSIGN ENDPOINT ---
 router.put("/complaints/:id/assign", checkAuth, checkManager, async (req, res) => {
-  const { id } = req.params;
-  const { emp_id, vehicle_id } = req.body; // <-- UPDATED
+  const { id } = req.params; // <-- 'id' IS THE complaint_id
+  const { emp_id, vehicle_id } = req.body;
   
-  if (!emp_id || !vehicle_id) { // <-- UPDATED
+  if (!emp_id || !vehicle_id) {
     return res.status(400).json({ error: "Employee ID and Vehicle ID are required" });
   }
 
@@ -115,11 +116,16 @@ router.put("/complaints/:id/assign", checkAuth, checkManager, async (req, res) =
     const [complaintRows] = await connection.query("SELECT route_id FROM Complaints WHERE complaint_id = ?", [id]);
     const route_id = complaintRows.length ? complaintRows[0].route_id : null;
 
-    // 3. Log this assignment in the Assigned_To table (as per plan)
+    // 3. Log this assignment in the Assigned_To table
+    //
+    // --- THIS IS THE FIX ---
+    // We must include the 'complaint_id' (which is 'id' from req.params)
+    //
     await connection.query(
-      "INSERT INTO Assigned_To (emp_id, vehicle_id, route_id, assign_date) VALUES (?, ?, ?, ?)",
-      [emp_id, vehicle_id, route_id, new Date()]
+      "INSERT INTO Assigned_To (emp_id, vehicle_id, route_id, complaint_id, assign_date) VALUES (?, ?, ?, ?, ?)",
+      [emp_id, vehicle_id, route_id, id, new Date()] 
     );
+    // --- END FIX ---
 
     await connection.commit();
     res.json({ message: "Re-assigned and logged successfully" });
@@ -133,5 +139,6 @@ router.put("/complaints/:id/assign", checkAuth, checkManager, async (req, res) =
   }
 });
 // --- END UPDATED ENDPOINT ---
+
 
 module.exports = router;
