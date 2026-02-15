@@ -7,16 +7,16 @@
     "start": "node server.js"
   },
   "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dedlinux777/waste-track.git"
-  },
+  "type": "git",
+  "url": "git+https://github.com/Hemanth777N/WasteTrack-Smart-Urban-Waste-Management-System.git"
+},
   "keywords": [],
-  "author": "Harshavardhan N, Muaz Ahmed Khan",
+  "author": "Hemanth777N",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/dedlinux777/waste-track/issues"
+    "url": "https://github.com/Hemanth777N/WasteTrack-Smart-Urban-Waste-Management-System/issues"
   },
-  "homepage": "https://github.com/dedlinux777/waste-track#readme",
+  "homepage": "https://github.com/Hemanth777N/WasteTrack-Smart-Urban-Waste-Management-System#readme",
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.2",
